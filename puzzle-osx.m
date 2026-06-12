@@ -2,9 +2,7 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <MetalKit/MetalKit.h>
 
-void vlk_init() {}
-void vlk_frame() {}
-void vlk_deinit() {}
+#include "vlk.h"
 
 @interface POCViewDelegate : NSObject<MTKViewDelegate>
 @property (nonatomic) BOOL ready;

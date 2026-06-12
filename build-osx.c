@@ -72,6 +72,7 @@ static int link_exe() {
     "-framework", "AudioToolbox",
     "-framework", "MetalKit",
     "-o", "puzzle.app/Contents/MacOS/puzzle", 
+    "vlk.o",
     "volk.o", "microui.o", "puzzle-osx.o",
     0 };
   return run(args);
@@ -108,7 +109,7 @@ int main(int argc, char ** argv) {
 
   if (app("puzzle")) return 1;
   if (cm("puzzle-osx.m", "puzzle-osx.o")) return 1;
-  // if (hdr("vlk-puzzle.h", "vlk-puzzle.o", "VLK_IMPL")) return 1;
+  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
   if (link_exe()) return 1;
 
   if (shader("puzzle.frag")) return 1;
