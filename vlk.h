@@ -27,6 +27,9 @@ static VkSurfaceKHR       vlk_surf;
 static unsigned           vlk_qf;
 static unsigned           vlk_swc_count;
 
+static VkPipelineLayout vlk_pl;
+static VkPipeline       vlk_ppl;
+
 #define MAX_SWAPCHAIN_IMAGES 8
 typedef struct vlk_swc {
   VkFramebuffer   fb  [MAX_SWAPCHAIN_IMAGES];
@@ -475,6 +478,81 @@ static void vlk_create_fences() {
   }
 }
 
+static void vlk_create_pipeline_layout() {
+  VkPipelineLayoutCreateInfo pl_info = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+  };
+  _(vkCreatePipelineLayout(vlk_dev, &pl_info, NULL, &vlk_pl));
+}
+
+static void vlk_create_pipeline() {
+  VkShaderModule vert = vlk_create_shader_module("puzzle.vert");
+  VkShaderModule frag = vlk_create_shader_module("puzzle.frag");
+
+  VkGraphicsPipelineCreateInfo ppl_info = {
+    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+    .stageCount = 2,
+    .pStages  = (VkPipelineShaderStageCreateInfo[]) {{
+      .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .stage  = VK_SHADER_STAGE_VERTEX_BIT,
+      .module = vert,
+      .pName  = "main",
+    }, {
+      .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
+      .module = frag,
+      .pName  = "main",
+    }},
+    .pVertexInputState = (VkPipelineVertexInputStateCreateInfo[]) {{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    }},
+    .pInputAssemblyState = (VkPipelineInputAssemblyStateCreateInfo[]) {{
+      .sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+    }},
+    .pViewportState  = (VkPipelineViewportStateCreateInfo[]) {{
+      .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+      .viewportCount = 1,
+      .scissorCount  = 1,
+    }},
+    .pRasterizationState = (VkPipelineRasterizationStateCreateInfo[]) {{
+      .sType       = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+      .polygonMode = VK_POLYGON_MODE_FILL,
+      .lineWidth   = 1,
+    }},
+    .pMultisampleState = (VkPipelineMultisampleStateCreateInfo[]) {{
+      .sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+    }},
+    .pColorBlendState = (VkPipelineColorBlendStateCreateInfo[]) {{
+      .sType            = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      .logicOp          = VK_LOGIC_OP_COPY,
+      .attachmentCount  = 1,
+      .pAttachments     = (VkPipelineColorBlendAttachmentState[]) {{
+        .blendEnable         = 1,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
+      }},
+    }},
+    .pDynamicState = (VkPipelineDynamicStateCreateInfo[]) {{
+      .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+      .dynamicStateCount = 2,
+      .pDynamicStates    = (VkDynamicState[]) {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+      },
+    }},
+    .layout     = vlk_pl,
+    .renderPass = vlk_rp,
+  };
+  _(vkCreateGraphicsPipelines(vlk_dev, NULL, 1, &ppl_info, NULL, &vlk_ppl));
+
+  vkDestroyShaderModule(vlk_dev, vert, NULL);
+  vkDestroyShaderModule(vlk_dev, frag, NULL);
+}
+
 void vlk_init() {
 #if !TARGET_OS_IPHONE
   _(volkInitialize());
@@ -492,6 +570,9 @@ void vlk_init() {
   vlk_allocate_command_buffers(vlk_swc_count, vlk_cb);
 
   vlk_create_render_pass();
+
+  vlk_create_pipeline_layout();
+  vlk_create_pipeline();
 }
 
 void vlk_deinit() {
@@ -506,6 +587,9 @@ void vlk_deinit() {
     vkDestroySemaphore(vlk_dev, vlk_sema_img    [i], NULL);
     vkDestroySemaphore(vlk_dev, vlk_sema_present[i], NULL);
   }
+
+  vkDestroyPipeline      (vlk_dev, vlk_ppl, NULL);
+  vkDestroyPipelineLayout(vlk_dev, vlk_pl,  NULL);
 
   vkDestroyCommandPool(vlk_dev, vlk_cpool, NULL);
   vkDestroyRenderPass(vlk_dev, vlk_rp, NULL);
