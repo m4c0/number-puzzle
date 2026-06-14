@@ -28,7 +28,7 @@ float sd_digit(vec2 p, uint n) {
   // Digit "4" changed to suit my style
   const int[] font = int[](0x75557, 0x22222, 0x74717, 0x74747, 0x55744, 0x71747, 0x71757, 0x74444, 0x75757, 0x75747);
 
-  p = p / 0.9;
+  p = p / 0.8;
   float d = sd_box(p, vec2(1));
 
   p = p * 0.5 + 0.5;
@@ -40,7 +40,7 @@ float sd_digit(vec2 p, uint n) {
 }
 
 vec3 c_number(vec2 p, vec3 c, uvec2 id) {
-  p = p * 2;
+  p = p * vec2(2, 2.5);
   float d = sd_box(p, vec2(1));
   d = 1 - step(0, d);
 
