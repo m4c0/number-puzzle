@@ -25,6 +25,11 @@ static int run(char ** args) {
   return 1;
 }
 
+static int cp(char * name) {
+  char * args[] = { "cp", name, "puzzle.app/Contents/Resources", 0 };
+  return run(args);
+}
+
 static int shader(char * name) {
   char spv[1024]; snprintf(spv, 1024, "puzzle.app/Contents/Resources/%s.spv", name);
   char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
@@ -73,7 +78,7 @@ static int link_exe() {
     "-framework", "MetalKit",
     "-o", "puzzle.app/Contents/MacOS/puzzle", 
     "vlk.o",
-    "volk.o", "microui.o", "puzzle-osx.o",
+    "stb_image.o", "volk.o", "microui.o", "puzzle-osx.o",
     0 };
   return run(args);
 }
@@ -101,7 +106,8 @@ int main(int argc, char ** argv) {
 
   if (pch()) return 1;
 
-  if (hdr("volk.h", "volk.o", "VOLK_IMPLEMENTATION")) return 1;
+  if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
+  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION"))      return 1;
 
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
@@ -113,6 +119,9 @@ int main(int argc, char ** argv) {
 
   if (shader("puzzle.frag")) return 1;
   if (shader("puzzle.vert")) return 1;
+
+  if (cp("bg_cathedral.jpg")) return 1;
+  if (cp("bg_village.jpg"  )) return 1;
 
   return 0;
 }

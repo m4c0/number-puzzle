@@ -86,7 +86,7 @@ int main(int argc, char ** argv) {
   if (pch()) return 1;
 
   if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
-  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION")) return 1;
+  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION"))      return 1;
 
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
