@@ -950,16 +950,24 @@ void vlk_frame() {
   }
 }
 
-void vlk_mouse_move(int x, int y) {
-  float px = (float)x / (float)vlk_ext.width;
-  float py = (float)y / (float)vlk_ext.height;
+static int vlk_mouse(float p, float a) {
 #ifdef __APPLE__
-  px *= 2; py *= 2;
+  p *= 2;
 #endif
-  
-  px *= 5;
-  py *= 5;
 
+  p = p * 2 - 1;
+  p *= a;
+
+  p /= 0.9;
+  p = p * 0.5 + 0.5;
+  p *= 5;
+  return p;
+}
+void vlk_mouse_move(int x, int y) {
+  float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect);
+  float py = vlk_mouse((float)y / (float)vlk_ext.height, 1);
+  
+  if (px < 0 || px >= 5 || py < 0 || py >= 5) px = py = 10;
   vlk_pc.sel_id = (int)px + (int)py * 5;
 }
 
