@@ -846,6 +846,7 @@ static void vlk_record(VkCommandBuffer cb) {
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
   vkCmdDraw(cb, 3, 1, 0, 0);
 }
+static int vlk_first = 1;
 static void vlk_record_cmdbuf(int i) {
   VkCommandBuffer cb = vlk_cb[i];
 
@@ -853,6 +854,13 @@ static void vlk_record_cmdbuf(int i) {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
   };
   vkBeginCommandBuffer(cb, &binfo);
+
+  if (vlk_first) {
+    int brd[25] = {0};
+    for (int i = 0; i < 24; i++) brd[i] = i + 1;
+    vkCmdUpdateBuffer(cb, vlk_board_buf, 0, 25 * sizeof(int), brd);
+    vlk_first = 0;
+  }
 
   VkClearValue clear = {
     .color = {{ 0.1, 0.2, 0.3, 1 }},
