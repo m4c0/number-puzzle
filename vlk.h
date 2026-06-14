@@ -774,6 +774,14 @@ void vlk_deinit() {
 }
 
 static void vlk_record(VkCommandBuffer cb) {
+  vlk_upc_t pc = {
+    .aspect = (float)vlk_ext.width / (float)vlk_ext.height,
+  };
+
+  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &pc);
+  vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
+  vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
+  vkCmdDraw(cb, 3, 1, 0, 0);
 }
 static void vlk_record_cmdbuf(int i) {
   VkCommandBuffer cb = vlk_cb[i];
