@@ -107,7 +107,7 @@ void main() {
   float d = 1 - sd_main_box(p, 0.95);
   d = d * lim;
 
-  if (id == pc.sel_id) d = 0;
+  if (id == pc.sel_id) d *= 0.7;
   if (n == 0) d = 0;
 
   c = c_number(p, c, n);
