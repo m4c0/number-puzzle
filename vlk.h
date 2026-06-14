@@ -521,7 +521,7 @@ static void vlk_allocate_descriptor_set() {
 static void vlk_create_descriptor_set_layout() {
   VkDescriptorSetLayoutCreateInfo info = {
     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-    .bindingCount = 2,
+    .bindingCount = 1,
     .pBindings = (VkDescriptorSetLayoutBinding[]) {{
       .binding = 0,
       .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
