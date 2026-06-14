@@ -7,6 +7,10 @@ void vlk_deinit();
 
 #ifdef VLK_IMPL
 
+typedef struct vlk_upc_s {
+  float aspect;
+} vlk_upc_t;
+
 #ifdef __APPLE__
 CAMetalLayer * vlk_metal_layer();
 #endif
@@ -27,8 +31,12 @@ static VkSurfaceKHR       vlk_surf;
 static unsigned           vlk_qf;
 static unsigned           vlk_swc_count;
 
-static VkPipelineLayout vlk_pl;
-static VkPipeline       vlk_ppl;
+static VkDescriptorPool      vlk_dpool;
+static VkDescriptorSetLayout vlk_dsl;
+static VkDescriptorSet       vlk_dset;
+static VkPipelineLayout      vlk_pl;
+static VkPipeline            vlk_ppl;
+static VkSampler             vlk_smp;
 
 #define MAX_SWAPCHAIN_IMAGES 8
 typedef struct vlk_swc {
@@ -478,11 +486,64 @@ static void vlk_create_fences() {
   }
 }
 
-static void vlk_create_pipeline_layout() {
-  VkPipelineLayoutCreateInfo pl_info = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+static void vlk_create_sampler() {
+  VkSamplerCreateInfo info = {
+    .sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    .magFilter = VK_FILTER_NEAREST,
+    .minFilter = VK_FILTER_NEAREST,
   };
-  _(vkCreatePipelineLayout(vlk_dev, &pl_info, NULL, &vlk_pl));
+  _(vkCreateSampler(vlk_dev, &info, NULL, &vlk_smp));
+}
+
+static void vlk_create_descriptor_pool() {
+  VkDescriptorPoolCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    .maxSets = 1,
+    .poolSizeCount = 1,
+    .pPoolSizes = (VkDescriptorPoolSize[]) {{
+      .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .descriptorCount = 1,
+    }},
+  };
+  _(vkCreateDescriptorPool(vlk_dev, &info, NULL, &vlk_dpool));
+}
+
+static void vlk_allocate_descriptor_set() {
+  VkDescriptorSetAllocateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .descriptorPool = vlk_dpool,
+    .descriptorSetCount = 1,
+    .pSetLayouts = &vlk_dsl,
+  };
+  _(vkAllocateDescriptorSets(vlk_dev, &info, &vlk_dset));
+}
+
+static void vlk_create_descriptor_set_layout() {
+  VkDescriptorSetLayoutCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+    .bindingCount = 2,
+    .pBindings = (VkDescriptorSetLayoutBinding[]) {{
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .descriptorCount = 1,
+      .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+    }},
+  };
+  _(vkCreateDescriptorSetLayout(vlk_dev, &info, NULL, &vlk_dsl));
+}
+
+static void vlk_create_pipeline_layout() {
+  VkPipelineLayoutCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    .setLayoutCount         = 1,
+    .pSetLayouts            = &vlk_dsl,
+    .pushConstantRangeCount = 1,
+    .pPushConstantRanges = (VkPushConstantRange[]) {{
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+      .size       = sizeof(vlk_upc_t),
+    }},
+  };
+  _(vkCreatePipelineLayout(vlk_dev, &info, NULL, &vlk_pl));
 }
 
 static void vlk_create_pipeline() {
@@ -571,8 +632,12 @@ void vlk_init() {
 
   vlk_create_render_pass();
 
+  vlk_create_sampler();
+  vlk_create_descriptor_pool();
+  vlk_create_descriptor_set_layout();
   vlk_create_pipeline_layout();
   vlk_create_pipeline();
+  vlk_allocate_descriptor_set();
 }
 
 void vlk_deinit() {
@@ -588,8 +653,11 @@ void vlk_deinit() {
     vkDestroySemaphore(vlk_dev, vlk_sema_present[i], NULL);
   }
 
-  vkDestroyPipeline      (vlk_dev, vlk_ppl, NULL);
-  vkDestroyPipelineLayout(vlk_dev, vlk_pl,  NULL);
+  vkDestroyPipeline           (vlk_dev, vlk_ppl,   NULL);
+  vkDestroyPipelineLayout     (vlk_dev, vlk_pl,    NULL);
+  vkDestroyDescriptorSetLayout(vlk_dev, vlk_dsl,   NULL);
+  vkDestroyDescriptorPool     (vlk_dev, vlk_dpool, NULL);
+  vkDestroySampler            (vlk_dev, vlk_smp,   NULL);
 
   vkDestroyCommandPool(vlk_dev, vlk_cpool, NULL);
   vkDestroyRenderPass(vlk_dev, vlk_rp, NULL);
