@@ -5,6 +5,14 @@ void vlk_init();
 void vlk_frame();
 void vlk_deinit();
 
+extern FILE * vlk_open(const char * name, const char * ext);
+
+#ifdef __APPLE__
+extern CAMetalLayer * vlk_metal_layer();
+#elif _WIN32
+extern HWND vlk_hwnd;
+#endif
+
 #ifdef VLK_IMPL
 
 #include "stb_image.h"
@@ -12,14 +20,6 @@ void vlk_deinit();
 typedef struct vlk_upc_s {
   float aspect;
 } vlk_upc_t;
-
-#ifdef __APPLE__
-CAMetalLayer * vlk_metal_layer();
-#endif
-
-#ifdef _WIN32
-extern HWND vlk_hwnd;
-#endif
 
 static VkCommandPool      vlk_cpool;
 static VkDevice           vlk_dev;
@@ -330,7 +330,6 @@ static void vlk_create_swc() {
   vlk_create_framebuffer();
 }
 
-FILE * vlk_open(const char * name, const char * ext);
 static VkShaderModule vlk_create_shader_module(const char * name) {
   FILE * f = vlk_open(name, "spv");
   assert(f);
