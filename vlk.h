@@ -716,6 +716,22 @@ static void vlk_load_atlas(FILE * f) {
   stbi_image_free(img);
 }
 
+static void vlk_update_descriptor_sets() {
+  VkWriteDescriptorSet wds[] = {{
+    .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+    .dstSet          = vlk_dset,
+    .dstBinding      = 0,
+    .descriptorCount = 1,
+    .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    .pImageInfo      = (VkDescriptorImageInfo[]) {{
+      .sampler       = vlk_smp,
+      .imageView     = vlk_atlas.iv,
+      .imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    }},
+  }};
+  vkUpdateDescriptorSets(vlk_dev, 1, wds, 0, NULL);
+}
+
 void vlk_init() {
 #if !TARGET_OS_IPHONE
   _(volkInitialize());
@@ -739,11 +755,14 @@ void vlk_init() {
   vlk_create_descriptor_set_layout();
   vlk_create_pipeline_layout();
   vlk_create_pipeline();
+
   vlk_allocate_descriptor_set();
 
   FILE * f = vlk_open("bg_cathedral", "jpg");
   vlk_load_atlas(f);
   fclose(f);
+
+  vlk_update_descriptor_sets();
 }
 
 void vlk_deinit() {
