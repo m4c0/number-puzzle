@@ -489,8 +489,8 @@ static void vlk_create_fences() {
 static void vlk_create_sampler() {
   VkSamplerCreateInfo info = {
     .sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-    .magFilter = VK_FILTER_NEAREST,
-    .minFilter = VK_FILTER_NEAREST,
+    .magFilter = VK_FILTER_LINEAR,
+    .minFilter = VK_FILTER_LINEAR,
   };
   _(vkCreateSampler(vlk_dev, &info, NULL, &vlk_smp));
 }
