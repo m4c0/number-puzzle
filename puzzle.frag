@@ -5,6 +5,9 @@ layout(push_constant) uniform upc {
 } pc;
 
 layout(binding = 0) uniform sampler2D txt;
+layout(binding = 1) readonly buffer brd {
+  uint board[];
+};
 
 layout(location = 0) in vec2 f_pos;
 
@@ -93,9 +96,10 @@ void main() {
 
   float d = 1 - sd_main_box(p, 0.95);
   d = d * lim;
-  if (id == uvec2(w - 1)) d = 0;
 
-  uint n = 1 + id.x + id.y * w;
+  uint n = board[id.x + id.y * w];
+  if (n == 0) d = 0;
+
   c = c_number(p, c, n);
   c = mix(vec3(0.2, 0.1, 0.05), c, d);
   colour = vec4(c, 1);

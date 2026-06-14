@@ -509,7 +509,7 @@ static void vlk_create_descriptor_pool() {
       .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
       .descriptorCount = 1,
     }, {
-      .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       .descriptorCount = 1,
     }},
   };
@@ -537,7 +537,7 @@ static void vlk_create_descriptor_set_layout() {
       .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     }, {
       .binding = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       .descriptorCount = 1,
       .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     }},
@@ -744,7 +744,7 @@ static void vlk_update_descriptor_sets() {
     .dstSet          = vlk_dset,
     .dstBinding      = 1,
     .descriptorCount = 1,
-    .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
     .pBufferInfo     = (VkDescriptorBufferInfo[]) {{
       .buffer        = vlk_board_buf,
       .range         = VK_WHOLE_SIZE,
@@ -757,7 +757,7 @@ static VkBuffer vlk_create_board_buffer(VkDeviceSize sz) {
   VkBufferCreateInfo buf_info = {
     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .size  = sz,
-    .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
   };
   VkBuffer buf;
   _(vkCreateBuffer(vlk_dev, &buf_info, NULL, &buf));
