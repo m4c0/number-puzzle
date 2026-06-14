@@ -38,8 +38,7 @@ float sd_digit(vec2 p, uint n) {
 
   return step(0, d);
 }
-
-vec3 c_number(vec2 p, vec3 c, uvec2 id) {
+float sd_digit(vec2 p, uvec2 id) {
   p = p * vec2(2, 2.5);
   float d = sd_box(p, vec2(1));
   d = 1 - step(0, d);
@@ -51,8 +50,30 @@ vec3 c_number(vec2 p, vec3 c, uvec2 id) {
   p.x = fract(p.x + 1);
   p.x = p.x * 2 - 1;
   d = d * (1 - sd_digit(p, n));
+  return d;
+}
 
-  return mix(c, vec3(1), d);
+vec3 c_number(vec2 p, vec3 c, uvec2 id) {
+  float fgn = 0;
+  for (int my = -2; my <= 2; my++) {
+    for (int mx = -2; mx <= 2; mx++) {
+      vec2 m = vec2(mx, my) * 0.005;
+      float fnm = sd_digit(p - m, id);
+
+      float gm = mat3(
+        36, 24, 6,
+        24, 16, 4,
+        6, 4, 1
+      )[abs(my)][abs(mx)];
+      
+      fgn += fnm * gm;
+    }
+  }
+  fgn /= 256;
+
+  c = mix(c, vec3(0), smoothstep(0.0, 0.5, fgn));
+  c = mix(c, vec3(1), smoothstep(0.5, 1.0, fgn));
+  return c;
 }
 
 void main() {
