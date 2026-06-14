@@ -807,6 +807,8 @@ void vlk_init() {
   fclose(f);
 
   vlk_update_descriptor_sets();
+
+  vlk_pc.sel_id = 1000;
 }
 
 void vlk_deinit() {
@@ -950,7 +952,7 @@ void vlk_frame() {
   }
 }
 
-static int vlk_mouse(float p, float a) {
+static float vlk_mouse(float p, float a) {
 #ifdef __APPLE__
   p *= 2;
 #endif
