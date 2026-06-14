@@ -15,9 +15,14 @@ float sd_box(vec2 p, vec2 b) {
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 } 
 
+vec4 c_main(vec2 p, float sc) {
+  float d = sd_box(p, vec2(sc));
+
+  vec4 c = texture(txt, (p / sc) * 0.5 + 0.5);
+  c = mix(c, vec4(0.2, 0.1, 0.05, 1.0), step(0, d));
+  return c;
+}
+
 void main() {
-  float d = sd_box(f_pos, vec2(1));
-  d = step(0, d);
-  vec4 c = texture(txt, f_pos * 0.5 + 0.5);
-  colour = mix(c, vec4(0.2, 0.1, 0.05, 1.0), d);
+  colour = c_main(f_pos, 0.9);
 }
