@@ -82,22 +82,23 @@ void main() {
   const float sc = 0.9;
   vec2 p = f_pos / sc;
 
-  vec2 uv = p * 0.5 + 0.5;
-  vec3 c = texture(txt, uv).rgb;
-
   float lim = 1 - step(0, sd_box(p, vec2(1)));
 
   p = p * 0.5 + 0.5;
   p = fract(p);
   p = p * float(w);
   uvec2 id = uvec2(p);
+  uint n = board[id.x + id.y * w];
+
   p = fract(p);
+  uvec2 uvi = uvec2((n - 1) % w, (n - 1) / w);
+  vec2 uv = (uvi + p) / float(w);
+  vec3 c = texture(txt, uv).rgb;
+
   p = p * 2 - 1;
 
   float d = 1 - sd_main_box(p, 0.95);
   d = d * lim;
-
-  uint n = board[id.x + id.y * w];
   if (n == 0) d = 0;
 
   c = c_number(p, c, n);
