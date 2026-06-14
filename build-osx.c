@@ -103,13 +103,12 @@ int main(int argc, char ** argv) {
 
   if (hdr("volk.h", "volk.o", "VOLK_IMPLEMENTATION")) return 1;
 
-  // if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
+  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
   if (cc("microui.c", "microui.o")) return 1;
 
   if (app("puzzle")) return 1;
   if (cm("puzzle-osx.m", "puzzle-osx.o")) return 1;
-  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
   if (link_exe()) return 1;
 
   if (shader("puzzle.frag")) return 1;
