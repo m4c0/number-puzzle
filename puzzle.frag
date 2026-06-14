@@ -38,12 +38,11 @@ float sd_digit(vec2 p, uint n) {
 
   return step(0, d);
 }
-float sd_digit(vec2 p, uvec2 id) {
+float sd_number(vec2 p, uint n) {
   p = p * vec2(2, 2.5);
   float d = sd_box(p, vec2(1));
   d = 1 - step(0, d);
 
-  uint n = 1 + id.x + id.y * w;
   n = n / (p.x < 0 ? 10 : 1);
   n = n % 10;
 
@@ -53,12 +52,12 @@ float sd_digit(vec2 p, uvec2 id) {
   return d;
 }
 
-vec3 c_number(vec2 p, vec3 c, uvec2 id) {
+vec3 c_number(vec2 p, vec3 c, uint id) {
   float fgn = 0;
   for (int my = -2; my <= 2; my++) {
     for (int mx = -2; mx <= 2; mx++) {
       vec2 m = vec2(mx, my) * 0.005;
-      float fnm = sd_digit(p - m, id);
+      float fnm = sd_number(p - m, id);
 
       float gm = mat3(
         36, 24, 6,
@@ -96,7 +95,8 @@ void main() {
   d = d * lim;
   if (id == uvec2(w - 1)) d = 0;
 
-  c = c_number(p, c, id);
+  uint n = 1 + id.x + id.y * w;
+  c = c_number(p, c, n);
   c = mix(vec3(0.2, 0.1, 0.05), c, d);
   colour = vec4(c, 1);
 }
