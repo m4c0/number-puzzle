@@ -7,6 +7,8 @@ void vlk_deinit();
 
 #ifdef VLK_IMPL
 
+#include "stb_image.h"
+
 typedef struct vlk_upc_s {
   float aspect;
 } vlk_upc_t;
@@ -696,21 +698,22 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
 }
 
 static void vlk_load_atlas(FILE * f) {
-  vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8_UNORM);
+  int w, h, c;
+  stbi_uc * img = stbi_load_from_file(f, &w, &h, &c, 4);
 
-  assert(f);
-  assert(0 == fseek(f, 0, SEEK_END));
-  long sz = ftell(f);
-  assert(sz == 1024 * 1024);
-  assert(0 == fseek(f, 0, SEEK_SET));
+  vlk_create_img(&vlk_atlas, w, h, VK_FORMAT_R8G8B8A8_UNORM);
 
-  void * data;
-  _(vkMapMemory(vlk_dev, vlk_atlas.h_mem, 0, VK_WHOLE_SIZE, 0, &data));
-  assert(1 == fread(data, sz, 1, f));
+  stbi_uc * data;
+  _(vkMapMemory(vlk_dev, vlk_atlas.h_mem, 0, VK_WHOLE_SIZE, 0, (void **)&data));
+
+  for (int i = 0; i < w * h * 4; i++) data[i] = img[i];
+
   vkUnmapMemory(vlk_dev, vlk_atlas.h_mem);
   fclose(f);
 
-  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, 1024, 1024);
+  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, w, h);
+
+  stbi_image_free(img);
 }
 
 void vlk_init() {

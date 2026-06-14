@@ -72,7 +72,7 @@ static int link_exe() {
     "clang", "-Wall", OPT,
     "-o", "app/puzzle.exe", 
     "vlk.o",
-    "volk.o", "microui.o", "puzzle-win.o",
+    "stb_image.o", "volk.o", "microui.o", "puzzle-win.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
     0 };
   return run(args);
@@ -85,7 +85,8 @@ int main(int argc, char ** argv) {
 
   if (pch()) return 1;
 
-  if (hdr("volk.h", "volk.o", "VOLK_IMPLEMENTATION")) return 1;
+  if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
+  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION")) return 1;
 
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
