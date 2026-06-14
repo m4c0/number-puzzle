@@ -696,12 +696,12 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
 }
 
 static void vlk_load_atlas(FILE * f) {
-  vlk_create_img(&vlk_atlas, 128, 32, VK_FORMAT_R8_UNORM);
+  vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8_UNORM);
 
   assert(f);
   assert(0 == fseek(f, 0, SEEK_END));
   long sz = ftell(f);
-  assert(sz == 128 * 32);
+  assert(sz == 1024 * 1024);
   assert(0 == fseek(f, 0, SEEK_SET));
 
   void * data;
@@ -710,7 +710,7 @@ static void vlk_load_atlas(FILE * f) {
   vkUnmapMemory(vlk_dev, vlk_atlas.h_mem);
   fclose(f);
 
-  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, 128, 32);
+  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, 1024, 1024);
 }
 
 void vlk_init() {
