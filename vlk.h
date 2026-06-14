@@ -858,6 +858,14 @@ static void vlk_record_cmdbuf(int i) {
   if (vlk_first) {
     int brd[25] = {0};
     for (int i = 0; i < 24; i++) brd[i] = i + 1;
+    for (int i = 0; i < 25; i++) {
+      for (int j = 0; j < 25; j++) {
+        if (rand() % 2) continue;
+        int tmp = brd[i];
+        brd[i] = brd[j];
+        brd[j] = tmp;
+      }
+    }
     vkCmdUpdateBuffer(cb, vlk_board_buf, 0, 25 * sizeof(int), brd);
     vlk_first = 0;
   }
