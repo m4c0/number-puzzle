@@ -5,6 +5,7 @@ void vlk_init();
 void vlk_frame();
 void vlk_deinit();
 
+void vlk_mouse_down(int x, int y);
 void vlk_mouse_move(int x, int y);
 
 extern FILE * vlk_open(const char * name, const char * ext);
@@ -18,6 +19,8 @@ extern HWND vlk_hwnd;
 #ifdef VLK_IMPL
 
 #include "stb_image.h"
+
+static int vlk_board[25];
 
 typedef struct vlk_upc_s {
   float    aspect;
@@ -46,6 +49,8 @@ static VkSampler             vlk_smp;
 
 static VkBuffer       vlk_board_buf;
 static VkDeviceMemory vlk_board_mem;
+
+static int vlk_board_load = 1;
 
 #define MAX_SWAPCHAIN_IMAGES 8
 typedef struct vlk_swc {
@@ -809,6 +814,16 @@ void vlk_init() {
   vlk_update_descriptor_sets();
 
   vlk_pc.sel_id = 1000;
+
+  for (int i = 0; i < 24; i++) vlk_board[i] = i + 1;
+  for (int i = 0; i < 25; i++) {
+    for (int j = 0; j < 25; j++) {
+      if (rand() % 2) continue;
+      int tmp = vlk_board[i];
+      vlk_board[i] = vlk_board[j];
+      vlk_board[j] = tmp;
+    }
+  }
 }
 
 void vlk_deinit() {
@@ -849,7 +864,6 @@ static void vlk_record(VkCommandBuffer cb) {
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
   vkCmdDraw(cb, 3, 1, 0, 0);
 }
-static int vlk_first = 1;
 static void vlk_record_cmdbuf(int i) {
   VkCommandBuffer cb = vlk_cb[i];
 
@@ -858,19 +872,9 @@ static void vlk_record_cmdbuf(int i) {
   };
   vkBeginCommandBuffer(cb, &binfo);
 
-  if (vlk_first) {
-    int brd[25] = {0};
-    for (int i = 0; i < 24; i++) brd[i] = i + 1;
-    for (int i = 0; i < 25; i++) {
-      for (int j = 0; j < 25; j++) {
-        if (rand() % 2) continue;
-        int tmp = brd[i];
-        brd[i] = brd[j];
-        brd[j] = tmp;
-      }
-    }
-    vkCmdUpdateBuffer(cb, vlk_board_buf, 0, 25 * sizeof(int), brd);
-    vlk_first = 0;
+  if (vlk_board_load) {
+    vkCmdUpdateBuffer(cb, vlk_board_buf, 0, 25 * sizeof(int), vlk_board);
+    vlk_board_load = 0;
   }
 
   VkClearValue clear = {
@@ -971,6 +975,28 @@ void vlk_mouse_move(int x, int y) {
   
   if (px < 0 || px >= 5 || py < 0 || py >= 5) px = py = 10;
   vlk_pc.sel_id = (int)px + (int)py * 5;
+}
+static int vlk_board_swap(unsigned a, unsigned b) {
+  if (b >= 25) return 0;
+  if (vlk_board[b]) return 0;
+
+  int tmp = vlk_board[a];
+  vlk_board[a] = vlk_board[b];
+  vlk_board[b] = tmp;
+
+  vlk_board_load = 1;
+  return 1;
+}
+void vlk_mouse_down(int x, int y) {
+  vlk_mouse_move(x, y);
+
+  int id = vlk_pc.sel_id;
+  if (id >= 25) return;
+
+  if (vlk_board_swap(id, id + 1)) return;
+  if (vlk_board_swap(id, id - 1)) return;
+  if (vlk_board_swap(id, id + 5)) return;
+  if (vlk_board_swap(id, id - 5)) return;
 }
 
 #endif

@@ -25,11 +25,11 @@
 - (BOOL)acceptsFirstResponder {
   return YES;
 }
-// - (void) mouseDown:(NSEvent *)event {
-//   CGPoint liw = [event locationInWindow];
-//   CGPoint p = [self convertPoint:liw fromView:nil];
-//   mu_input_mousedown(&mui_ctx, p.x, self.frame.size.height - p.y, 1);
-// }
+- (void) mouseDown:(NSEvent *)event {
+  CGPoint liw = [event locationInWindow];
+  CGPoint p = [self convertPoint:liw fromView:nil];
+  vlk_mouse_down(p.x, self.frame.size.height - p.y);
+}
 // - (void) mouseUp:(NSEvent *)event {
 //   CGPoint liw = [event locationInWindow];
 //   CGPoint p = [self convertPoint:liw fromView:nil];
