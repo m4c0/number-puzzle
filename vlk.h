@@ -433,7 +433,7 @@ static VkImageView vlk_create_image_view(VkImage img, VkFormat fmt) {
 }
 
 static void vlk_create_img(vlk_img_t * img, unsigned w, unsigned h, VkFormat fmt) {
-  unsigned sz = w * h;
+  unsigned sz = w * h * 4;
 
   img->h_buf = vlk_create_buffer_for_image(sz);
   img->h_mem = vlk_allocate_memory(sz, vlk_find_host_memory());
