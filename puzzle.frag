@@ -44,7 +44,7 @@ vec3 c_number(vec2 p, vec3 c, uvec2 id) {
   float d = sd_box(p, vec2(1));
   d = 1 - step(0, d);
 
-  uint n = id.x + id.y * w;
+  uint n = 1 + id.x + id.y * w;
   n = n / (p.x < 0 ? 10 : 1);
   n = n % 10;
 
