@@ -78,17 +78,23 @@ vec3 c_number(vec2 p, vec3 c, uint id) {
   return c;
 }
 
-void main() {
-  const float sc = 0.9;
-  vec2 p = f_pos / sc;
+vec2 pick(in vec2 p, out float lim, out uint n) {
+  p = p / 0.9;
 
-  float lim = 1 - step(0, sd_box(p, vec2(1)));
+  lim = 1 - step(0, sd_box(p, vec2(1)));
 
   p = p * 0.5 + 0.5;
   p = fract(p);
   p = p * float(w);
   uvec2 id = uvec2(p);
-  uint n = board[id.x + id.y * w];
+  n = board[id.x + id.y * w];
+  return p;
+}
+
+void main() {
+  float lim = 0;
+  uint n = 0;
+  vec2 p = pick(f_pos, lim, n);
 
   p = fract(p);
   uvec2 uvi = uvec2((n - 1) % w, (n - 1) / w);
