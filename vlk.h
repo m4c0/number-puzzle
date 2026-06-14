@@ -614,6 +614,105 @@ static void vlk_create_pipeline() {
   vkDestroyShaderModule(vlk_dev, frag, NULL);
 }
 
+static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int h) {
+  VkCommandBuffer cb;
+  vlk_allocate_command_buffers(1, &cb);
+
+  VkCommandBufferBeginInfo binfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+  };
+  vkBeginCommandBuffer(cb, &binfo);
+
+  VkDependencyInfoKHR di = {
+    .sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+    .bufferMemoryBarrierCount = 1,
+    .pBufferMemoryBarriers    = (VkBufferMemoryBarrier2KHR[]) {{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
+      .srcStageMask  = VK_PIPELINE_STAGE_HOST_BIT,
+      .dstStageMask  = VK_PIPELINE_STAGE_TRANSFER_BIT,
+      .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
+      .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+      .buffer        = buf,
+      .size          = VK_WHOLE_SIZE,
+    }},
+    .imageMemoryBarrierCount = 1,
+    .pImageMemoryBarriers    = (VkImageMemoryBarrier2KHR[]) {{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+      .srcStageMask     = VK_PIPELINE_STAGE_HOST_BIT,
+      .dstStageMask     = VK_PIPELINE_STAGE_TRANSFER_BIT,
+      .dstAccessMask    = VK_ACCESS_TRANSFER_WRITE_BIT,
+      .newLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      .image            = img,
+      .subresourceRange = {
+        .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+        .levelCount     = 1,
+        .layerCount     = 1,
+      },
+    }},
+  };
+  vkCmdPipelineBarrier2KHR(cb, &di);
+
+  VkBufferImageCopy bic = {
+    .imageExtent = (VkExtent3D) { w, h, 1 },
+    .imageSubresource = {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .layerCount     = 1,
+    },
+  };
+  vkCmdCopyBufferToImage(cb, buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
+
+  di = (VkDependencyInfoKHR) {
+    .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+    .imageMemoryBarrierCount = 1,
+    .pImageMemoryBarriers    = (VkImageMemoryBarrier2KHR[]) {{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+      .srcStageMask     = VK_PIPELINE_STAGE_TRANSFER_BIT,
+      .dstStageMask     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      .srcAccessMask    = VK_ACCESS_TRANSFER_WRITE_BIT,
+      .dstAccessMask    = VK_ACCESS_SHADER_READ_BIT,
+      .oldLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      .newLayout        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      .image            = img,
+      .subresourceRange = {
+        .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+        .levelCount     = 1,
+        .layerCount     = 1,
+      },
+    }},
+  };
+  vkCmdPipelineBarrier2KHR(cb, &di);
+
+  vkEndCommandBuffer(cb);
+
+  VkSubmitInfo submit = {
+    .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pCommandBuffers    = &cb,
+    .commandBufferCount = 1,
+  };
+  _(vkQueueSubmit(vlk_q, 1, &submit, NULL));
+
+  return cb;
+}
+
+static void vlk_load_atlas(FILE * f) {
+  vlk_create_img(&vlk_atlas, 128, 32, VK_FORMAT_R8_UNORM);
+
+  assert(f);
+  assert(0 == fseek(f, 0, SEEK_END));
+  long sz = ftell(f);
+  assert(sz == 128 * 32);
+  assert(0 == fseek(f, 0, SEEK_SET));
+
+  void * data;
+  _(vkMapMemory(vlk_dev, vlk_atlas.h_mem, 0, VK_WHOLE_SIZE, 0, &data));
+  assert(1 == fread(data, sz, 1, f));
+  vkUnmapMemory(vlk_dev, vlk_atlas.h_mem);
+  fclose(f);
+
+  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, 128, 32);
+}
+
 void vlk_init() {
 #if !TARGET_OS_IPHONE
   _(volkInitialize());
@@ -638,6 +737,10 @@ void vlk_init() {
   vlk_create_pipeline_layout();
   vlk_create_pipeline();
   vlk_allocate_descriptor_set();
+
+  FILE * f = vlk_open("bg_cathedral", "jpg");
+  vlk_load_atlas(f);
+  fclose(f);
 }
 
 void vlk_deinit() {
@@ -755,105 +858,5 @@ void vlk_frame() {
     vlk_create_swc();
   }
 }
-
-static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int h) {
-  VkCommandBuffer cb;
-  vlk_allocate_command_buffers(1, &cb);
-
-  VkCommandBufferBeginInfo binfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-  };
-  vkBeginCommandBuffer(cb, &binfo);
-
-  VkDependencyInfoKHR di = {
-    .sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-    .bufferMemoryBarrierCount = 1,
-    .pBufferMemoryBarriers    = (VkBufferMemoryBarrier2KHR[]) {{
-      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
-      .srcStageMask  = VK_PIPELINE_STAGE_HOST_BIT,
-      .dstStageMask  = VK_PIPELINE_STAGE_TRANSFER_BIT,
-      .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-      .buffer        = buf,
-      .size          = VK_WHOLE_SIZE,
-    }},
-    .imageMemoryBarrierCount = 1,
-    .pImageMemoryBarriers    = (VkImageMemoryBarrier2KHR[]) {{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
-      .srcStageMask     = VK_PIPELINE_STAGE_HOST_BIT,
-      .dstStageMask     = VK_PIPELINE_STAGE_TRANSFER_BIT,
-      .dstAccessMask    = VK_ACCESS_TRANSFER_WRITE_BIT,
-      .newLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      .image            = img,
-      .subresourceRange = {
-        .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-        .levelCount     = 1,
-        .layerCount     = 1,
-      },
-    }},
-  };
-  vkCmdPipelineBarrier2KHR(cb, &di);
-
-  VkBufferImageCopy bic = {
-    .imageExtent = (VkExtent3D) { w, h, 1 },
-    .imageSubresource = {
-      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-      .layerCount     = 1,
-    },
-  };
-  vkCmdCopyBufferToImage(cb, buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
-
-  di = (VkDependencyInfoKHR) {
-    .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-    .imageMemoryBarrierCount = 1,
-    .pImageMemoryBarriers    = (VkImageMemoryBarrier2KHR[]) {{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
-      .srcStageMask     = VK_PIPELINE_STAGE_TRANSFER_BIT,
-      .dstStageMask     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-      .srcAccessMask    = VK_ACCESS_TRANSFER_WRITE_BIT,
-      .dstAccessMask    = VK_ACCESS_SHADER_READ_BIT,
-      .oldLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      .newLayout        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      .image            = img,
-      .subresourceRange = {
-        .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-        .levelCount     = 1,
-        .layerCount     = 1,
-      },
-    }},
-  };
-  vkCmdPipelineBarrier2KHR(cb, &di);
-
-  vkEndCommandBuffer(cb);
-
-  VkSubmitInfo submit = {
-    .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .pCommandBuffers    = &cb,
-    .commandBufferCount = 1,
-  };
-  _(vkQueueSubmit(vlk_q, 1, &submit, NULL));
-
-  return cb;
-}
-
-static void vlk_load_atlas(FILE * f) {
-  vlk_create_img(&vlk_atlas, 128, 32, VK_FORMAT_R8_UNORM);
-
-  assert(f);
-  assert(0 == fseek(f, 0, SEEK_END));
-  long sz = ftell(f);
-  assert(sz == 128 * 32);
-  assert(0 == fseek(f, 0, SEEK_SET));
-
-  void * data;
-  _(vkMapMemory(vlk_dev, vlk_atlas.h_mem, 0, VK_WHOLE_SIZE, 0, &data));
-  assert(1 == fread(data, sz, 1, f));
-  vkUnmapMemory(vlk_dev, vlk_atlas.h_mem);
-  fclose(f);
-
-  vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, 128, 32);
-}
-
 #endif
 #endif

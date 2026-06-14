@@ -24,6 +24,11 @@ static int run(char ** args) {
   return 1;
 }
 
+static int cp(char * name) {
+  char * args[] = { "cmd", "/c", "copy", name, "app", 0 };
+  return run(args);
+}
+
 static int shader(char * name) {
   char spv[1024]; snprintf(spv, 1024, "app/%s.spv", name);
 
@@ -91,6 +96,9 @@ int main(int argc, char ** argv) {
 
   if (shader("puzzle.frag")) return 1;
   if (shader("puzzle.vert")) return 1;
+
+  if (cp("bg_cathedral.jpg")) return 1;
+  if (cp("bg_village.jpg"  )) return 1;
 
   return 0;
 }
