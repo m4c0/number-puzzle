@@ -35,11 +35,11 @@
 //   CGPoint p = [self convertPoint:liw fromView:nil];
 //   mu_input_mouseup(&mui_ctx, p.x, self.frame.size.height - p.y, 1);
 // }
-// - (void) mouseMoved:(NSEvent *)event {
-//   CGPoint liw = [event locationInWindow];
-//   CGPoint p = [self convertPoint:liw fromView:nil];
-//   mu_input_mousemove(&mui_ctx, p.x, self.frame.size.height - p.y);
-// }
+- (void) mouseMoved:(NSEvent *)event {
+  CGPoint liw = [event locationInWindow];
+  CGPoint p = [self convertPoint:liw fromView:nil];
+  vlk_mouse_move(p.x, self.frame.size.height - p.y);
+}
 // - (void) mouseDragged:(NSEvent *)event {
 //   CGPoint liw = [event locationInWindow];
 //   CGPoint p = [self convertPoint:liw fromView:nil];

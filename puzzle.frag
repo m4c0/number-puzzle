@@ -2,6 +2,7 @@
 
 layout(push_constant) uniform upc {
   float aspect;
+  uint  sel_id;
 } pc;
 
 layout(binding = 0) uniform sampler2D txt;
@@ -78,7 +79,7 @@ vec3 c_number(vec2 p, vec3 c, uint id) {
   return c;
 }
 
-vec2 pick(in vec2 p, out float lim, out uint n) {
+vec2 pick(in vec2 p, out float lim) {
   p = p / 0.9;
 
   lim = 1 - step(0, sd_box(p, vec2(1)));
@@ -86,15 +87,15 @@ vec2 pick(in vec2 p, out float lim, out uint n) {
   p = p * 0.5 + 0.5;
   p = fract(p);
   p = p * float(w);
-  uvec2 id = uvec2(p);
-  n = board[id.x + id.y * w];
   return p;
 }
 
 void main() {
   float lim = 0;
-  uint n = 0;
-  vec2 p = pick(f_pos, lim, n);
+  vec2 p = pick(f_pos, lim);
+  uvec2 id2 = uvec2(p);
+  uint id = id2.x + id2.y * w;
+  uint n = board[id];
 
   p = fract(p);
   uvec2 uvi = uvec2((n - 1) % w, (n - 1) / w);
@@ -105,6 +106,8 @@ void main() {
 
   float d = 1 - sd_main_box(p, 0.95);
   d = d * lim;
+
+  if (id == pc.sel_id) d = 0;
   if (n == 0) d = 0;
 
   c = c_number(p, c, n);

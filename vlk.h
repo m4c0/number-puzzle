@@ -5,6 +5,8 @@ void vlk_init();
 void vlk_frame();
 void vlk_deinit();
 
+void vlk_mouse_move(int x, int y);
+
 extern FILE * vlk_open(const char * name, const char * ext);
 
 #ifdef __APPLE__
@@ -18,8 +20,10 @@ extern HWND vlk_hwnd;
 #include "stb_image.h"
 
 typedef struct vlk_upc_s {
-  float aspect;
+  float    aspect;
+  unsigned sel_id;
 } vlk_upc_t;
+static vlk_upc_t vlk_pc;
 
 static VkCommandPool      vlk_cpool;
 static VkDevice           vlk_dev;
@@ -836,11 +840,9 @@ void vlk_deinit() {
 }
 
 static void vlk_record(VkCommandBuffer cb) {
-  vlk_upc_t pc = {
-    .aspect = (float)vlk_ext.width / (float)vlk_ext.height,
-  };
+  vlk_pc.aspect = (float)vlk_ext.width / (float)vlk_ext.height;
 
-  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &pc);
+  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &vlk_pc);
   vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
   vkCmdDraw(cb, 3, 1, 0, 0);
@@ -947,5 +949,19 @@ void vlk_frame() {
     vlk_create_swc();
   }
 }
+
+void vlk_mouse_move(int x, int y) {
+  float px = (float)x / (float)vlk_ext.width;
+  float py = (float)y / (float)vlk_ext.height;
+#ifdef __APPLE__
+  px *= 2; py *= 2;
+#endif
+  
+  px *= 5;
+  py *= 5;
+
+  vlk_pc.sel_id = (int)px + (int)py * 5;
+}
+
 #endif
 #endif

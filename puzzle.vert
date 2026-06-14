@@ -2,6 +2,7 @@
 
 layout(push_constant) uniform upc {
   float aspect;
+  uint  sel_id;
 } pc;
 
 layout(location = 0) out vec2 f_pos;
