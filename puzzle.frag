@@ -35,11 +35,14 @@ void main() {
   p = p * 0.5 + 0.5;
   p = fract(p);
   p = p * float(w);
+  uvec2 id = uvec2(p);
   p = fract(p);
   p = p * 2 - 1;
 
   float d = 1 - sd_main_box(p, 0.95);
   d = d * lim;
+
+  if (id == uvec2(w - 1)) d = 0;
 
   vec3 c = mix(vec3(0.2, 0.1, 0.05), t, d);
   colour = vec4(c, 1);
