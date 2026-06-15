@@ -1011,7 +1011,7 @@ void vlk_reset() {
   vlk_load_atlas(f);
   fclose(f);
 
-  brd_init(3);
+  brd_init(4);
 
   vlk_pc.won    = 0;
   vlk_pc.sel_id = 1000;
