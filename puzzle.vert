@@ -5,6 +5,7 @@ layout(push_constant) uniform upc {
   float time;
   float won;
   uint  sel_id;
+  uint  w;
 } pc;
 
 layout(location = 0) out vec2 f_pos;

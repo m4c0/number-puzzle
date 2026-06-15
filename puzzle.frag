@@ -5,6 +5,7 @@ layout(push_constant) uniform upc {
   float time;
   float won;
   uint  sel_id;
+  uint  w;
 } pc;
 
 layout(binding = 0) uniform sampler2D txt;
@@ -15,8 +16,6 @@ layout(binding = 1) readonly buffer brd {
 layout(location = 0) in vec2 f_pos;
 
 layout(location = 0) out vec4 colour;
-
-const uint w = 5;
 
 float sd_box(vec2 p, vec2 b) {
   vec2 d = abs(p) - b;
@@ -88,7 +87,7 @@ vec2 pick(in vec2 p, out float lim) {
 
   p = p * 0.5 + 0.5;
   p = fract(p);
-  p = p * float(w);
+  p = p * float(pc.w);
   return p;
 }
 
@@ -96,12 +95,12 @@ void main() {
   float lim = 0;
   vec2 p = pick(f_pos, lim);
   uvec2 id2 = uvec2(p);
-  uint id = id2.x + id2.y * w;
+  uint id = id2.x + id2.y * pc.w;
   uint n = board[id];
 
   p = fract(p);
-  uvec2 uvi = uvec2((n - 1) % w, (n - 1) / w);
-  vec2 uv = (uvi + p) / float(w);
+  uvec2 uvi = uvec2((n - 1) % pc.w, (n - 1) / pc.w);
+  vec2 uv = (uvi + p) / float(pc.w);
   vec3 c = texture(txt, uv).rgb;
 
   p = p * 2 - 1;
