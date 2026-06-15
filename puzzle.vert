@@ -2,6 +2,8 @@
 
 layout(push_constant) uniform upc {
   float aspect;
+  float time;
+  float won;
   uint  sel_id;
 } pc;
 

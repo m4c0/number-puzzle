@@ -19,11 +19,14 @@ extern HWND vlk_hwnd;
 #ifdef VLK_IMPL
 
 #include "stb_image.h"
+#include "tim.h"
 
 static int vlk_board[25];
 
 typedef struct vlk_upc_s {
   float    aspect;
+  float    time;
+  float    won;
   unsigned sel_id;
 } vlk_upc_t;
 static vlk_upc_t vlk_pc;
@@ -780,6 +783,8 @@ void vlk_create_board() {
 }
 
 void vlk_init() {
+  srand(time(NULL));
+
 #if !TARGET_OS_IPHONE
   _(volkInitialize());
 #endif
@@ -813,6 +818,7 @@ void vlk_init() {
 
   vlk_update_descriptor_sets();
 
+  vlk_pc.won    = 0;
   vlk_pc.sel_id = 1000;
 
   for (int i = 0; i < 24; i++) vlk_board[i] = i + 1;
@@ -858,6 +864,7 @@ void vlk_deinit() {
 
 static void vlk_record(VkCommandBuffer cb) {
   vlk_pc.aspect = (float)vlk_ext.width / (float)vlk_ext.height;
+  vlk_pc.time   = tim_now();
 
   vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &vlk_pc);
   vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
@@ -984,6 +991,12 @@ static int vlk_board_swap(unsigned a, unsigned b) {
   vlk_board[a] = vlk_board[b];
   vlk_board[b] = tmp;
 
+  int won = 1;
+  for (int i = 0; i < 25; i++) {
+    if (vlk_board[i] != i + 1) won = 0;
+  }
+
+  vlk_pc.won = won;
   vlk_board_load = 1;
   return 1;
 }
