@@ -815,6 +815,7 @@ void vlk_init() {
   vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8G8B8A8_UNORM);
   vlk_update_descriptor_sets();
 
+  vlk_pc.won = 1;
   vlk_reset();
 }
 
@@ -1006,6 +1007,8 @@ const char * vlk_atlases[VLK_ATLAS_COUNT] = {
   "bg_village",
 };
 void vlk_reset() {
+  if (!vlk_pc.won) return;
+
   int n = rand() % VLK_ATLAS_COUNT;
 
   FILE * f = vlk_open(vlk_atlases[n], "jpg");
