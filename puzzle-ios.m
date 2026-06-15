@@ -29,7 +29,12 @@ CAMetalLayer * g_layer;
 - (BOOL)canBecomeFirstResponder {
   return YES;
 }
-- (void) touchesBegan:(NSSet<UITouch *> *) touches withEvent:(UIEvent *) event {
+
+- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
+  vlk_reset();
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *) touches withEvent:(UIEvent *) event {
   CGPoint p = [[touches anyObject] locationInView:[self view]];
   vlk_mouse_move(p.x, p.y);
   vlk_mouse_down(p.x, p.y);
@@ -63,6 +68,8 @@ CAMetalLayer * g_layer;
 configurationForConnectingSceneSession:(UISceneSession *) connectingSceneSession 
                                options:(UISceneConnectionOptions *) options
 {
+  application.applicationSupportsShakeToEdit = YES;
+
   UISceneConfiguration * res = [[UISceneConfiguration alloc] initWithName:@"Default"
                                                               sessionRole:connectingSceneSession.role];
   res.sceneClass = [UIWindowScene class];
