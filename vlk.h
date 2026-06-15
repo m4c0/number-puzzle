@@ -977,6 +977,8 @@ static float vlk_mouse(float p, float a) {
   return p;
 }
 void vlk_mouse_move(int x, int y) {
+  if (vlk_pc.won) return;
+
   float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect);
   float py = vlk_mouse((float)y / (float)vlk_ext.height, 1);
   
@@ -991,16 +993,18 @@ static int vlk_board_swap(unsigned a, unsigned b) {
   vlk_board[a] = vlk_board[b];
   vlk_board[b] = tmp;
 
-  int won = 1;
-  for (int i = 0; i < 25; i++) {
+  int won = vlk_board[24] == 0;;
+  for (int i = 0; i < 25 - 1; i++) {
     if (vlk_board[i] != i + 1) won = 0;
   }
 
-  vlk_pc.won = won;
+  vlk_pc.sel_id = 1000;
+  vlk_pc.won = won ? tim_now() : 0;
   vlk_board_load = 1;
   return 1;
 }
 void vlk_mouse_down(int x, int y) {
+  if (vlk_pc.won) return;
   vlk_mouse_move(x, y);
 
   int id = vlk_pc.sel_id;
