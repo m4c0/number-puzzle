@@ -24,7 +24,7 @@ extern HWND vlk_hwnd;
 #include "tim.h"
 
 typedef struct vlk_upc_s {
-  float    aspect;
+  float    aspect_x, aspect_y;
   float    time;
   float    won;
   unsigned sel_id;
@@ -849,8 +849,10 @@ void vlk_deinit() {
 }
 
 static void vlk_record(VkCommandBuffer cb) {
-  vlk_pc.aspect = (float)vlk_ext.width / (float)vlk_ext.height;
-  vlk_pc.time   = tim_now();
+  float a = (float)vlk_ext.width / (float)vlk_ext.height;
+  vlk_pc.aspect_x = a > 1 ? a : 1;
+  vlk_pc.aspect_y = a > 1 ? 1 : (1.0 / a);
+  vlk_pc.time = tim_now();
 
   vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &vlk_pc);
   vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
@@ -965,8 +967,8 @@ static float vlk_mouse(float p, float a) {
 void vlk_mouse_move(int x, int y) {
   if (vlk_pc.won) return;
 
-  float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect);
-  float py = vlk_mouse((float)y / (float)vlk_ext.height, 1);
+  float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
+  float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
   
   if (px < 0 || px >= brd_w || py < 0 || py >= brd_w) px = py = 10;
   vlk_pc.sel_id = (int)px + (int)py * brd_w;

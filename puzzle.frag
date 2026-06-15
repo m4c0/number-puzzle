@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform upc {
-  float aspect;
+  vec2  aspect;
   float time;
   float won;
   uint  sel_id;
