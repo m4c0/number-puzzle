@@ -978,7 +978,12 @@ void vlk_mouse_move(int x, int y) {
   if (px < 0 || px >= brd_w || py < 0 || py >= brd_w) px = py = 10;
   vlk_pc.sel_id = (int)px + (int)py * brd_w;
 }
-static int vlk_board_swap(unsigned a, unsigned b) {
+static int vlk_board_swap(int a, int dx, int dy) {
+  int bx = dx + (a % brd_w);
+  int by = dy + (a / brd_w);
+  if (bx < 0 || bx >= brd_w || by < 0 || by >= brd_w) return 0;
+  int b = by * brd_w + bx;
+  
   if (b >= brd_w2) return 0;
   if (brd[b]) return 0;
 
@@ -995,10 +1000,10 @@ void vlk_mouse_down(int x, int y) {
   int id = vlk_pc.sel_id;
   if (id >= brd_w2) return;
 
-  if (vlk_board_swap(id, id + 1)) return;
-  if (vlk_board_swap(id, id - 1)) return;
-  if (vlk_board_swap(id, id + brd_w)) return;
-  if (vlk_board_swap(id, id - brd_w)) return;
+  if (vlk_board_swap(id, +1,  0)) return;
+  if (vlk_board_swap(id, -1,  0)) return;
+  if (vlk_board_swap(id,  0, +1)) return;
+  if (vlk_board_swap(id,  0, -1)) return;
 }
 
 #endif
