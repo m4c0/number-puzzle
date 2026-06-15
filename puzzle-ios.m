@@ -31,6 +31,7 @@ CAMetalLayer * g_layer;
 }
 - (void) touchesBegan:(NSSet<UITouch *> *) touches withEvent:(UIEvent *) event {
   CGPoint p = [[touches anyObject] locationInView:[self view]];
+  vlk_mouse_move(p.x, p.y);
   vlk_mouse_down(p.x, p.y);
 }
 @end

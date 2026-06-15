@@ -990,7 +990,6 @@ static int vlk_board_swap(int a, int dx, int dy) {
 }
 void vlk_mouse_down(int x, int y) {
   if (vlk_pc.won) return;
-  vlk_mouse_move(x, y);
 
   int id = vlk_pc.sel_id;
   if (id >= brd_w2) return;
