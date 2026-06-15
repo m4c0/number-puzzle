@@ -25,6 +25,13 @@
 - (BOOL)acceptsFirstResponder {
   return YES;
 }
+- (void)keyDown:(NSEvent *)event {
+  NSString * chrs = event.charactersIgnoringModifiers;
+  if (chrs.length != 1) return;
+
+  unichar c = [chrs characterAtIndex:0];
+  if (c == ' ') vlk_reset();
+}
 - (void) mouseDown:(NSEvent *)event {
   CGPoint liw = [event locationInWindow];
   CGPoint p = [self convertPoint:liw fromView:nil];

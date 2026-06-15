@@ -5,6 +5,7 @@ void vlk_init();
 void vlk_frame();
 void vlk_deinit();
 
+void vlk_reset();
 void vlk_mouse_down(int x, int y);
 void vlk_mouse_move(int x, int y);
 
@@ -818,11 +819,7 @@ void vlk_init() {
 
   vlk_update_descriptor_sets();
 
-  brd_init(3);
-
-  vlk_pc.won    = 0;
-  vlk_pc.sel_id = 1000;
-  vlk_pc.w      = brd_w;
+  vlk_reset();
 }
 
 void vlk_deinit() {
@@ -1004,6 +1001,16 @@ void vlk_mouse_down(int x, int y) {
   if (vlk_board_swap(id, -1,  0)) return;
   if (vlk_board_swap(id,  0, +1)) return;
   if (vlk_board_swap(id,  0, -1)) return;
+}
+
+void vlk_reset() {
+  brd_init(3);
+
+  vlk_pc.won    = 0;
+  vlk_pc.sel_id = 1000;
+  vlk_pc.w      = brd_w;
+
+  vlk_board_load = 1;
 }
 
 #endif
