@@ -142,7 +142,7 @@ vec3 star_nest() {
     s+=stepsize;
   }
   v=mix(vec3(length(v)),v,saturation); //color adjust
-  return v*.01;	
+  return v*.005;	
 }
 
 vec3 back() {
