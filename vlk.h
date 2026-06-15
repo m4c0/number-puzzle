@@ -723,8 +723,8 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
 static void vlk_load_atlas(FILE * f) {
   int w, h, c;
   stbi_uc * img = stbi_load_from_file(f, &w, &h, &c, 4);
-
-  vlk_create_img(&vlk_atlas, w, h, VK_FORMAT_R8G8B8A8_UNORM);
+  assert(w == 1024);
+  assert(h == 1024);
 
   stbi_uc * data;
   _(vkMapMemory(vlk_dev, vlk_atlas.h_mem, 0, VK_WHOLE_SIZE, 0, (void **)&data));
@@ -812,11 +812,7 @@ void vlk_init() {
   vlk_create_pipeline();
 
   vlk_allocate_descriptor_set();
-
-  FILE * f = vlk_open("bg_cathedral", "jpg");
-  vlk_load_atlas(f);
-  fclose(f);
-
+  vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8G8B8A8_UNORM);
   vlk_update_descriptor_sets();
 
   vlk_reset();
@@ -1003,7 +999,18 @@ void vlk_mouse_down(int x, int y) {
   if (vlk_board_swap(id,  0, -1)) return;
 }
 
+#define VLK_ATLAS_COUNT 2
+const char * vlk_atlases[VLK_ATLAS_COUNT] = {
+  "bg_cathedral",
+  "bg_village",
+};
 void vlk_reset() {
+  int n = rand() % VLK_ATLAS_COUNT;
+
+  FILE * f = vlk_open(vlk_atlases[n], "jpg");
+  vlk_load_atlas(f);
+  fclose(f);
+
   brd_init(3);
 
   vlk_pc.won    = 0;
