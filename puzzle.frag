@@ -149,9 +149,14 @@ vec3 back() {
   vec2 p = f_pos / 0.9;
   float d = sd_box(p, vec2(1)) - 0.05;
 
-  vec3 bg = texture(txt, p * 0.5 + 0.5).rgb * 0.5;
 
-  vec3 cin = bg;
+  float db = abs(d);
+  db = smoothstep(0.05, 0.06, db);
+
+  vec3 cin = texture(txt, p * 0.5 + 0.5).rgb * 0.5;
+  cin = mix(vec3(0), cin, smoothstep(0.05, 1.2, pow(db, 2)));
+  cin = mix(vec3(0.3, 0.2, 0.1), cin, smoothstep(0.05, 0.06, db));
+
   vec3 cout = star_nest();
   return mix(cin, cout, step(0, d));
 }
