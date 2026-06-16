@@ -146,9 +146,12 @@ vec3 star_nest() {
 }
 
 vec3 back() {
-  float d = sd_box(f_pos, vec2(0.9)) - 0.05;
+  vec2 p = f_pos / 0.9;
+  float d = sd_box(p, vec2(1)) - 0.05;
 
-  vec3 cin  = vec3(0.2, 0.1, 0.05);
+  vec3 bg = texture(txt, p * 0.5 + 0.5).rgb * 0.5;
+
+  vec3 cin = bg;
   vec3 cout = star_nest();
   return mix(cin, cout, step(0, d));
 }

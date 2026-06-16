@@ -508,6 +508,8 @@ static void vlk_create_sampler() {
     .sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
     .magFilter = VK_FILTER_LINEAR,
     .minFilter = VK_FILTER_LINEAR,
+    .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
   };
   _(vkCreateSampler(vlk_dev, &info, NULL, &vlk_smp));
 }
