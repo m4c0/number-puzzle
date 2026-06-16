@@ -95,10 +95,10 @@ float noise(vec2 p) {
   vec2 f = fract(p);
   vec2 u = f*f*(3.0-2.0*f);
 
-  return mix( mix( hash( i + ivec2(0,0) ), 
-                   hash( i + ivec2(1,0) ), u.x),
-              mix( hash( i + ivec2(0,1) ), 
-                   hash( i + ivec2(1,1) ), u.x), u.y);
+  return mix(mix(hash(i + ivec2(0, 0)), 
+                 hash(i + ivec2(1, 0)), u.x),
+             mix(hash(i + ivec2(0, 1)), 
+                 hash(i + ivec2(1, 1)), u.x), u.y);
 }
 vec3 back_noise(vec2 p) {
   float f2 = dot(p, p);
@@ -119,7 +119,7 @@ vec3 back() {
   cin = mix(vec3(0), cin, smoothstep(0.05, 1.2, pow(db, 2)));
   cin = mix(vec3(0.3, 0.2, 0.1), cin, smoothstep(0.05, 0.06, db));
 
-  vec3 cout = back_noise(p);;
+  vec3 cout = back_noise(p);
   return mix(cin, cout, step(0, d));
 }
 
