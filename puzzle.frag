@@ -120,6 +120,9 @@ vec3 back() {
   cin = mix(vec3(0.3, 0.2, 0.1), cin, smoothstep(0.05, 0.06, db));
 
   vec3 cout = back_noise(p);
+  cout = mix(vec3(0), cout, smoothstep(0, 0.05, abs(d)) * 0.3 + 0.7);
+  cout = mix(vec3(0), cout, smoothstep(0, 0.005, abs(d)));
+
   return mix(cin, cout, step(0, d));
 }
 
