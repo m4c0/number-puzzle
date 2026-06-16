@@ -80,75 +80,37 @@ vec3 c_number(vec2 p, vec3 c, uint id) {
   return c;
 }
 
-// Adapted from:
-// =====================================
-// Star Nest by Pablo Roman Andrioli
-// License: MIT
-// https://www.shadertoy.com/view/XlfGRj
-// =====================================
-vec3 star_nest() {
+// Noise based on shaders created by Inigo Quilez
+// https://www.shadertoy.com/view/lsf3WH
+float hash(ivec2 p) {
+  // 2D -> 1D
+  int n = p.x*3 + p.y*113;
+  // 1D hash by Hugo Elias
+  n = (n << 13) ^ n;
+  n = n * (n * n * 15731 + 789221) + 1376312589;
+  return -1.0+2.0*float( n & 0x0fffffff)/float(0x0fffffff);
+}
+float noise(vec2 p) {
+  ivec2 i = ivec2(floor(p));
+  vec2 f = fract(p);
+  vec2 u = f*f*(3.0-2.0*f);
 
-#define iterations 17
-#define formuparam 0.53
-
-#define volsteps 20
-#define stepsize 0.1
-
-#define zoom   0.800
-#define tile   0.850
-#define speed  0.001 
-
-#define brightness 0.0015
-#define darkmatter 0.300
-#define distfading 0.730
-#define saturation 0.850
-
-  //get coords and direction
-  vec2 uv = f_pos;
-  vec3 dir=vec3(uv*zoom,1.);
-  float time=pc.time*speed+.25;
-
-  //mouse rotation
-  float a1=.5;
-  float a2=.8;
-  mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
-  mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
-  dir.xz*=rot1;
-  dir.xy*=rot2;
-  vec3 from=vec3(1.,.5,0.5);
-  from+=vec3(time*2.,time,-2.);
-  from.xz*=rot1;
-  from.xy*=rot2;
-
-  //volumetric rendering
-  float s=0.1,fade=1.;
-  vec3 v=vec3(0.);
-  for (int r=0; r<volsteps; r++) {
-    vec3 p=from+s*dir*.5;
-    p = abs(vec3(tile)-mod(p,vec3(tile*2.))); // tiling fold
-    float pa,a=pa=0.;
-    for (int i=0; i<iterations; i++) { 
-      p=abs(p)/dot(p,p)-formuparam; // the magic formula
-      a+=abs(length(p)-pa); // absolute sum of average change
-      pa=length(p);
-    }
-    float dm=max(0.,darkmatter-a*a*.001); //dark matter
-    a*=a*a; // add contrast
-    if (r>6) fade*=1.-dm; // dark matter, don't render near
-                          //v+=vec3(dm,dm*.5,0.);
-    v+=fade;
-    v+=vec3(s,s*s,s*s*s*s)*a*brightness*fade; // coloring based on distance
-    fade*=distfading; // distance fading
-    s+=stepsize;
-  }
-  v=mix(vec3(length(v)),v,saturation); //color adjust
-  return v*.005;	
+  return mix( mix( hash( i + ivec2(0,0) ), 
+                   hash( i + ivec2(1,0) ), u.x),
+              mix( hash( i + ivec2(0,1) ), 
+                   hash( i + ivec2(1,1) ), u.x), u.y);
+}
+vec3 back_noise(vec2 p) {
+  float f2 = dot(p, p);
+  float f = sqrt(f2);
+  vec2 uv = p / f2;
+  float n = noise(4. * uv + pc.time * 0.1);
+  return mix(vec3(0.2, 0.3, 0.4), vec3(0.1, 0.2, 0.3), n);
 }
 
 vec3 back() {
   vec2 p = f_pos / 0.9;
   float d = sd_box(p, vec2(1)) - 0.05;
-
 
   float db = abs(d);
   db = smoothstep(0.05, 0.06, db);
@@ -157,7 +119,7 @@ vec3 back() {
   cin = mix(vec3(0), cin, smoothstep(0.05, 1.2, pow(db, 2)));
   cin = mix(vec3(0.3, 0.2, 0.1), cin, smoothstep(0.05, 0.06, db));
 
-  vec3 cout = star_nest();
+  vec3 cout = back_noise(p);;
   return mix(cin, cout, step(0, d));
 }
 
