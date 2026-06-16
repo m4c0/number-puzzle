@@ -24,8 +24,7 @@ float sd_box(vec2 p, vec2 b) {
 
 float sd_main_box(vec2 p, float sc) {
   const float b = 0.1;
-  float d = sd_box(p, vec2(sc - b)) - b;
-  return step(0, d);
+  return sd_box(p, vec2(sc - b)) - b;
 }
 
 float sd_digit(vec2 p, uint n) {
@@ -151,13 +150,14 @@ void main() {
 
   p = p * 2 - 1;
 
-  float d = 1 - sd_main_box(p, 0.95);
-  d = d * lim;
+  float d = sd_main_box(p, 0.95);
+  float db = (1 - step(0, d)) * lim;
 
-  if (id == pc.sel_id) d *= 0.7;
-  if (n == 0) d = 0;
+  //if (id == pc.sel_id) db *= 0.7;
+  if (n == 0) db = 0;
 
   c = c_number(p, c, n);
-  c = mix(back(), c, d);
+  c = mix(back(), c, db);
+  c = mix(c, vec3(0), (1 - smoothstep(0, 0.03, abs(d))) * db);
   colour = vec4(c, 1);
 }
