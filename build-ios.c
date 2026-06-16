@@ -262,8 +262,11 @@ int main(int argc, char ** argv) {
   if (apply("xcarchive.plist.in", "export.xcarchive/Info.plist")) return 1;
   if (apply("app.plist.in",       "export.xcarchive/Products/Applications/puzzle.app/Info.plist")) return 1;
 
-  if (cp("bg_cathedral.jpg")) return 1;
-  if (cp("bg_village.jpg"  )) return 1;
+  for (int i = 1; i <= 31; i++) {
+    char buf[128];
+    snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
+    if (cp(buf)) return 1;
+  }
 
   if (actool())   return 1;
   if (codesign()) return 1;
