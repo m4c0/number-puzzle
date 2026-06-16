@@ -120,8 +120,11 @@ int main(int argc, char ** argv) {
   if (shader("puzzle.frag")) return 1;
   if (shader("puzzle.vert")) return 1;
 
-  if (cp("bg_cathedral.jpg")) return 1;
-  if (cp("bg_village.jpg"  )) return 1;
+  for (int i = 1; i <= 31; i++) {
+    char buf[128];
+    snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
+    if (cp(buf)) return 1;
+  }
 
   return 0;
 }

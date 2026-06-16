@@ -1003,17 +1003,15 @@ void vlk_mouse_down(int x, int y) {
   if (vlk_board_swap(id,  0, -1)) return;
 }
 
-#define VLK_ATLAS_COUNT 2
-const char * vlk_atlases[VLK_ATLAS_COUNT] = {
-  "bg_cathedral",
-  "bg_village",
-};
+#define VLK_ATLAS_COUNT 31
 void vlk_reset() {
   if (!vlk_pc.won) return;
 
-  int n = rand() % VLK_ATLAS_COUNT;
+  int n = 1 + (rand() % VLK_ATLAS_COUNT);
+  char buf[128];
+  snprintf(buf, 128, "bg-%003d", n);
 
-  FILE * f = vlk_open(vlk_atlases[n], "jpg");
+  FILE * f = vlk_open(buf, "jpg");
   vlk_load_atlas(f);
   fclose(f);
 
