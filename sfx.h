@@ -16,7 +16,7 @@ static unsigned sp = 0;
 static unsigned d = 1;
 
 float sfx_rand(unsigned ssp) {
-  return sfx_rand_buf[(ssp / d) % 1024];
+  return sfx_rand_buf[(ssp / 9) % 1024] * 2;
 }
 float sfx_sqr(unsigned ssp) {
   return ((ssp / d) % 2);
@@ -27,10 +27,10 @@ void sfx_filler(float * buf, unsigned sz) {
   float mult;
   if (ssp < 1000) {
     mult = ssp / 1000.0f;
-  } else if (ssp < 3000) {
+  } else if (ssp < 2000) {
     mult = 1.0;
-  } else if (ssp < 4000) {
-    mult = (4000 - ssp) / 1000.0f;
+  } else if (ssp < 3000) {
+    mult = (3000 - ssp) / 1000.0f;
   } else {
     mult = 0;
   }
