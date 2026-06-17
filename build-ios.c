@@ -223,7 +223,7 @@ static int link_exe() {
     "-framework", "QuartzCore",
     "-framework", "UIKit",
     "-o", APP_PATH "/puzzle", 
-    "vlk.o",
+    "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "microui.o", "puzzle-ios.o",
     "MoltenVK.xcframework/ios-arm64/libMoltenVK.a",
     "-lc++",
@@ -248,6 +248,8 @@ int main(int argc, char ** argv) {
 
   if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
 
+  if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
+  if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
   if (cc("microui.c", "microui.o")) return 1;

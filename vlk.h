@@ -21,6 +21,7 @@ extern HWND vlk_hwnd;
 
 #include "brd.h"
 #include "stb_image.h"
+#include "sfx.h"
 #include "tim.h"
 
 typedef struct vlk_upc_s {
@@ -989,6 +990,7 @@ static int vlk_board_swap(int a, int dx, int dy) {
   vlk_pc.sel_id = 1000;
   vlk_pc.won = won ? tim_now() : 0;
   vlk_board_load = 1;
+  if (vlk_pc.won) sfx_win(); else sfx_move();
   return 1;
 }
 void vlk_mouse_down(int x, int y) {
@@ -1016,6 +1018,7 @@ void vlk_reset() {
   fclose(f);
 
   brd_init(4);
+  sfx_shuffle();
 
   vlk_pc.won    = 0;
   vlk_pc.sel_id = 1000;

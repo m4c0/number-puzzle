@@ -77,7 +77,7 @@ static int link_exe() {
     "-framework", "AudioToolbox",
     "-framework", "MetalKit",
     "-o", "puzzle.app/Contents/MacOS/puzzle", 
-    "vlk.o",
+    "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "volk.o", "microui.o", "puzzle-osx.o",
     0 };
   return run(args);
@@ -109,6 +109,8 @@ int main(int argc, char ** argv) {
   if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
   if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION"))      return 1;
 
+  if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
+  if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
   if (cc("microui.c", "microui.o")) return 1;
