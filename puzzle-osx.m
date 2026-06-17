@@ -2,8 +2,6 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <MetalKit/MetalKit.h>
 
-#include "sfx.h"
-#include "snd.h"
 #include "vlk.h"
 
 @interface POCViewDelegate : NSObject<MTKViewDelegate>
@@ -15,7 +13,6 @@
 - (void)drawInMTKView:(MTKView *)view {
   if (!self.ready) {
     vlk_init();
-    snd_init(sfx_filler);
     self.ready = YES;
   }
   vlk_frame();
@@ -62,7 +59,6 @@
 @implementation POCAppDelegate
 - (void)applicationWillTerminate:(NSApplication *)app {
   vlk_deinit();
-  snd_deinit();
 }
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app {
   return YES;

@@ -22,6 +22,7 @@ extern HWND vlk_hwnd;
 #include "brd.h"
 #include "stb_image.h"
 #include "sfx.h"
+#include "snd.h"
 #include "tim.h"
 
 typedef struct vlk_upc_s {
@@ -820,10 +821,15 @@ void vlk_init() {
 
   vlk_pc.won = 1;
   vlk_reset();
+
+  sfx_init();
+  snd_init(sfx_filler);
 }
 
 void vlk_deinit() {
   vkDeviceWaitIdle(vlk_dev);
+
+  snd_deinit();
 
   vlk_destroy_swc(&vlk_swc);
   vlk_destroy_swc(&vlk_swc_old);
