@@ -30,7 +30,7 @@ typedef struct vlk_upc_s {
   float    time;
   float    won;
   unsigned sel_id;
-  unsigned w;
+  unsigned brd_w;
 } vlk_upc_t;
 static vlk_upc_t vlk_pc;
 
@@ -1028,7 +1028,7 @@ void vlk_reset() {
 
   vlk_pc.won    = 0;
   vlk_pc.sel_id = 1000;
-  vlk_pc.w      = brd_w;
+  vlk_pc.brd_w  = brd_w;
 
   vlk_board_load = 1;
 }
