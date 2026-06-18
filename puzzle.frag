@@ -107,7 +107,10 @@ float sd_arrow(vec2 p) {
 vec3 c_arrow(vec3 c) {
   if (pc.won == 0) return c;
 
-  vec2 p = f_pos;
+  vec2 pp = (pc.aspect - 1) * 0.45;
+  pp += sign(pp);
+
+  vec2 p = f_pos - pp;
   p /= 0.2;
 
   float a = pc.time;
