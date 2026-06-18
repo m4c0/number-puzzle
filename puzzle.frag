@@ -116,7 +116,8 @@ vec3 c_arrow(vec3 c) {
   float a = pc.time;
   p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
 
-  float d = sd_arrow(p) - 0.03;
+  float t = (1 - clamp(pc.time - pc.won, 0, 1)) * 0.08 - 0.05;
+  float d = sd_arrow(p) + t;
   c = mix(vec3(0), c, smoothstep(0, 0.05, d));
   c = mix(vec3(1), c, smoothstep(0, 0.03, d));
   return c;
