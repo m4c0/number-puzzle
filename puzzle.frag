@@ -79,6 +79,46 @@ vec3 c_number(vec2 p, vec3 c, uint id) {
   return c;
 }
 
+// Variant of Inigo Quilez' segment
+float sd_segment(vec2 p, vec2 a, vec2 ba) {
+  vec2 pa = p - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+// Variant of Inigo Quilez' arc
+float sd_arc(vec2 p, float a, float r) {
+  // sc is the sin/cos of the arc's aperture
+  vec2 sc = vec2(sin(a), cos(a));
+  p.x = abs(p.x);
+  return (sc.y * p.x > sc.x * p.y)
+    ? length(p - sc * r)
+    : abs(length(p) - r);
+}
+float sd_arrow(vec2 p) {
+  float a = 2.6; // Apperture angle
+  float d = sd_arc(p, a, 0.5);
+
+  // Arrow head
+  p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
+  d = min(d, sd_segment(p, vec2(0.0, 0.5), vec2(0.1,  0.1)));
+  d = min(d, sd_segment(p, vec2(0.0, 0.5), vec2(0.1, -0.2) * 0.7));
+  return d;
+}
+vec3 c_arrow(vec3 c) {
+  if (pc.won == 0) return c;
+
+  vec2 p = f_pos;
+  p /= 0.2;
+
+  float a = pc.time;
+  p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
+
+  float d = sd_arrow(p) - 0.03;
+  c = mix(vec3(0), c, smoothstep(0, 0.05, d));
+  c = mix(vec3(1), c, smoothstep(0, 0.03, d));
+  return c;
+}
+
 // Noise based on shaders created by Inigo Quilez
 // https://www.shadertoy.com/view/lsf3WH
 float hash(ivec2 p) {
@@ -159,5 +199,6 @@ void main() {
   c = c_number(p, c, n);
   c = mix(back(), c, db);
   c = mix(c, vec3(0), (1 - smoothstep(0, 0.03, abs(d))) * db);
+  c = c_arrow(c);
   colour = vec4(c, 1);
 }
