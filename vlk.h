@@ -1000,7 +1000,12 @@ static int vlk_board_swap(int a, int dx, int dy) {
   return 1;
 }
 void vlk_mouse_down(int x, int y) {
-  if (vlk_pc.won) return;
+  if (vlk_pc.won) {
+    float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
+    float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
+    if (px > brd_w || py > brd_w) vlk_reset();
+    return;
+  }
 
   int id = vlk_pc.sel_id;
   if (id >= brd_w2) return;
