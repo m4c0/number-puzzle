@@ -46,8 +46,8 @@ static void sfx_play(unsigned div) {
   sp = 0;
 }
 void sfx_move() { sfx_play(2); }
-void sfx_shuffle() { sfx_play(5); }
-void sfx_win() { sfx_play(1); }
+void sfx_shuffle() {}
+void sfx_win() { sfx_move(); }
 
 void sfx_init() {
   for (int i = 0; i < 1024; i++) {
