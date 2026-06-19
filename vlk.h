@@ -1037,6 +1037,9 @@ void vlk_reset() {
 }
 
 void vlk_headless(int w, int h, void * tgt) {
+  VkCommandBuffer cb;
+  vlk_allocate_command_buffers(vlk_swc_count, &cb);
+
   vlk_ext = (VkExtent2D) { w, h };
 
   VkBuffer buf = vlk_create_buffer(w * h * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -1053,6 +1056,51 @@ void vlk_headless(int w, int h, void * tgt) {
   VkSubmitInfo submit = {
     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
     .pCommandBuffers = vlk_cb,
+    .commandBufferCount = 1,
+  };
+  _(vkQueueSubmit(vlk_q, 1, &submit, NULL));
+  // Syncing in the lazy way
+  vkDeviceWaitIdle(vlk_dev);
+
+  VkCommandBufferBeginInfo binfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+  };
+  vkBeginCommandBuffer(cb, &binfo);
+
+  VkDependencyInfoKHR di = {
+    .sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+    .imageMemoryBarrierCount  = 1,
+    .pImageMemoryBarriers     = (VkImageMemoryBarrier2KHR[]) {{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+      .dstStageMask     = VK_PIPELINE_STAGE_TRANSFER_BIT,
+      .dstAccessMask    = VK_ACCESS_TRANSFER_READ_BIT,
+      .newLayout        = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      .image            = img,
+      .subresourceRange = {
+        .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+        .levelCount     = 1,
+        .layerCount     = 1,
+      },
+    }},
+  };
+  vkCmdPipelineBarrier2KHR(cb, &di);
+
+  VkBufferImageCopy reg = {
+    .bufferRowLength   = w,
+    .bufferImageHeight = h,
+    .imageExtent       = (VkExtent3D) { w, h, 1 },
+    .imageSubresource  = (VkImageSubresourceLayers) {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .layerCount     = 1,
+    },
+  };
+  vkCmdCopyImageToBuffer(cb, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buf, 1, &reg);
+
+  vkEndCommandBuffer(cb);
+
+  submit = (VkSubmitInfo) {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pCommandBuffers = &cb,
     .commandBufferCount = 1,
   };
   _(vkQueueSubmit(vlk_q, 1, &submit, NULL));
