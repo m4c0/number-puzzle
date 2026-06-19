@@ -1,3 +1,5 @@
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include "vlk.h"
 
 FILE * vlk_open(const char * name, const char * ext) {
@@ -20,8 +22,5 @@ int main() {
 
   vlk_deinit();
 
-  FILE * f = fopen("img.ppm", "wb");
-  fprintf(f, "P6\n800 600\n255\n");
-  fwrite(buf, 800 * 600 * 4, 1, f);
-  fclose(f);
+  stbi_write_png("shot.png", 800, 600, 4, buf, 800 * 4);
 }
