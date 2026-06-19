@@ -16,8 +16,12 @@ void * vlk_metal_layer() { return NULL; }
 int main() {
   vlk_init(0);
 
-  char * buf = malloc(800 * 600 * 4);
-  vlk_headless(800, 600, buf);
+  void * buf = vlk_headless(800, 600);
 
   vlk_deinit();
+
+  FILE * f = fopen("img.ppm", "wb");
+  fprintf(f, "P6\n800 600\n255\n");
+  fwrite(buf, 800 * 600 * 4, 1, f);
+  fclose(f);
 }

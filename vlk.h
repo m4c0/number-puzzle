@@ -5,7 +5,7 @@ void vlk_init(int surf);
 void vlk_frame();
 void vlk_deinit();
 
-void vlk_headless(int w, int h, void * tgt);
+void * vlk_headless(int w, int h);
 
 void vlk_reset();
 void vlk_mouse_down(int x, int y);
@@ -20,6 +20,7 @@ extern HWND vlk_hwnd;
 #endif
 
 #ifdef VLK_IMPL
+#include "Vulkan-Headers/include/vulkan/vulkan_core.h"
 
 #include "brd.h"
 #include "stb_image.h"
@@ -1036,7 +1037,7 @@ void vlk_reset() {
   vlk_board_load = 1;
 }
 
-void vlk_headless(int w, int h, void * tgt) {
+void * vlk_headless(int w, int h) {
   VkCommandBuffer cb;
   vlk_allocate_command_buffers(vlk_swc_count, &cb);
 
@@ -1107,10 +1108,18 @@ void vlk_headless(int w, int h, void * tgt) {
 
   vkDeviceWaitIdle(vlk_dev);
 
+  char * res = malloc(w * h * 4);
+  char * loc;
+  _(vkMapMemory(vlk_dev, b_mem, 0, VK_WHOLE_SIZE, 0, (void **)&loc));
+  memcpy(res, loc, 800 * 600 * 4);
+  vkUnmapMemory(vlk_dev, b_mem);
+
   vkFreeMemory    (vlk_dev, b_mem, NULL);
   vkFreeMemory    (vlk_dev, mem,   NULL);
   vkDestroyBuffer (vlk_dev, buf,   NULL);
   vkDestroyImage  (vlk_dev, img,   NULL);
+
+  return res;
 }
 
 #endif
