@@ -1111,7 +1111,7 @@ void * vlk_headless(int w, int h) {
   char * res = malloc(w * h * 4);
   char * loc;
   _(vkMapMemory(vlk_dev, b_mem, 0, VK_WHOLE_SIZE, 0, (void **)&loc));
-  memcpy(res, loc, 800 * 600 * 4);
+  memcpy(res, loc, w * h * 4);
   vkUnmapMemory(vlk_dev, b_mem);
 
   vkFreeMemory    (vlk_dev, b_mem, NULL);
