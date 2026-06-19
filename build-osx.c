@@ -83,6 +83,19 @@ static int link_exe() {
   return run(args);
 }
 
+static int link_shots_exe() {
+  char * args[] = {
+    "clang", "-Wall",
+    "-framework", "AppKit",
+    "-framework", "AudioToolbox",
+    "-framework", "MetalKit",
+    "-o", "puzzle.app/Contents/MacOS/shots", 
+    "sfx.o", "snd.o", "vlk.o",
+    "stb_image.o", "volk.o", "microui.o", "shots.o",
+    0 };
+  return run(args);
+}
+
 static void mkd(const char * n, const char * p) {
   char buf[1024];
   snprintf(buf, 1024, "%s.app/%s", n, p);
@@ -118,6 +131,9 @@ int main(int argc, char ** argv) {
   if (app("puzzle")) return 1;
   if (cm("puzzle-osx.m", "puzzle-osx.o")) return 1;
   if (link_exe()) return 1;
+
+  if (cc("shots.c", "shots.o")) return 1;
+  if (link_shots_exe()) return 1;
 
   if (shader("puzzle.frag")) return 1;
   if (shader("puzzle.vert")) return 1;

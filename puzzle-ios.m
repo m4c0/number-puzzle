@@ -16,7 +16,7 @@ CAMetalLayer * g_layer;
   if (!self.ready) {
     g_layer = (CAMetalLayer *)view.layer;
 
-    vlk_init();
+    vlk_init(1);
     self.ready = YES;
   }
   vlk_frame();

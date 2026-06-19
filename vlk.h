@@ -1,9 +1,11 @@
 #ifndef VLK_H
 #define VLK_H
 
-void vlk_init();
+void vlk_init(int surf);
 void vlk_frame();
 void vlk_deinit();
+
+void vlk_headless(int w, int h, void * tgt);
 
 void vlk_reset();
 void vlk_mouse_down(int x, int y);
@@ -787,7 +789,7 @@ void vlk_create_board() {
   _(vkBindBufferMemory(vlk_dev, vlk_board_buf, vlk_board_mem, 0));
 }
 
-void vlk_init() {
+void vlk_init(int surf) {
   srand(time(NULL));
 
 #if !TARGET_OS_IPHONE
@@ -796,7 +798,14 @@ void vlk_init() {
 
   vlk_create_instance();
   vlk_find_physical_device();
-  vlk_create_surface();
+
+  if (surf) vlk_create_surface();
+  else {
+    vlk_surf_fmt.format = VK_FORMAT_R8G8B8A8_UNORM;
+    vlk_surf_fmt.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    vlk_swc_count = 1;
+  }
+
   vlk_create_device();
 
   vlk_create_semaphores();
@@ -1036,6 +1045,29 @@ void vlk_reset() {
   vlk_pc.brd_w  = brd_w;
 
   vlk_board_load = 1;
+}
+
+void vlk_headless(int w, int h, void * tgt) {
+  vlk_ext = (VkExtent2D) { w, h };
+
+  VkImage img = vlk_create_image(w, h, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+  VkDeviceMemory mem = vlk_allocate_image_memory(img);
+  vlk_swc.iv[0] = vlk_create_image_view(img, VK_FORMAT_R8G8B8A8_UNORM);
+  vlk_create_framebuffer();
+
+  vlk_record_cmdbuf(0);
+
+  VkSubmitInfo submit = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pCommandBuffers = vlk_cb,
+    .commandBufferCount = 1,
+  };
+  _(vkQueueSubmit(vlk_q, 1, &submit, NULL));
+
+  vkDeviceWaitIdle(vlk_dev);
+
+  vkFreeMemory(vlk_dev, mem, NULL);
+  vkDestroyImage(vlk_dev, img, NULL);
 }
 
 #endif
