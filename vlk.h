@@ -371,11 +371,11 @@ static VkShaderModule vlk_create_shader_module(const char * name) {
   return mod;
 }
 
-static VkBuffer vlk_create_buffer_for_image(unsigned sz) {
+static VkBuffer vlk_create_buffer(unsigned sz, VkBufferUsageFlags flags) {
   VkBufferCreateInfo buf_info = {
     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .size  = sz,
-    .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    .usage = flags,
   };
   VkBuffer buf;
   _(vkCreateBuffer(vlk_dev, &buf_info, NULL, &buf));
@@ -454,7 +454,7 @@ static VkImageView vlk_create_image_view(VkImage img, VkFormat fmt) {
 static void vlk_create_img(vlk_img_t * img, unsigned w, unsigned h, VkFormat fmt) {
   unsigned sz = w * h * 4;
 
-  img->h_buf = vlk_create_buffer_for_image(sz);
+  img->h_buf = vlk_create_buffer(sz, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   img->h_mem = vlk_allocate_memory(sz, vlk_find_host_memory());
   _(vkBindBufferMemory(vlk_dev, img->h_buf, img->h_mem, 0));
 
@@ -771,20 +771,9 @@ static void vlk_update_descriptor_sets() {
   vkUpdateDescriptorSets(vlk_dev, 2, wds, 0, NULL);
 }
 
-static VkBuffer vlk_create_board_buffer(VkDeviceSize sz) {
-  VkBufferCreateInfo buf_info = {
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .size  = sz,
-    .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-  };
-  VkBuffer buf;
-  _(vkCreateBuffer(vlk_dev, &buf_info, NULL, &buf));
-  return buf;
-}
-
 void vlk_create_board() {
   const VkDeviceSize sz = sizeof(brd);
-  vlk_board_buf = vlk_create_board_buffer(sz);
+  vlk_board_buf = vlk_create_buffer(sz, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   vlk_board_mem = vlk_allocate_memory(sz, vlk_find_local_memory());
   _(vkBindBufferMemory(vlk_dev, vlk_board_buf, vlk_board_mem, 0));
 }
@@ -1050,6 +1039,10 @@ void vlk_reset() {
 void vlk_headless(int w, int h, void * tgt) {
   vlk_ext = (VkExtent2D) { w, h };
 
+  VkBuffer buf = vlk_create_buffer(w * h * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkDeviceMemory b_mem = vlk_allocate_memory(w * h * 4, vlk_find_host_memory());
+  _(vkBindBufferMemory(vlk_dev, buf, b_mem, 0));
+
   VkImage img = vlk_create_image(w, h, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
   VkDeviceMemory mem = vlk_allocate_image_memory(img);
   vlk_swc.iv[0] = vlk_create_image_view(img, VK_FORMAT_R8G8B8A8_UNORM);
@@ -1066,8 +1059,10 @@ void vlk_headless(int w, int h, void * tgt) {
 
   vkDeviceWaitIdle(vlk_dev);
 
-  vkFreeMemory(vlk_dev, mem, NULL);
-  vkDestroyImage(vlk_dev, img, NULL);
+  vkFreeMemory    (vlk_dev, b_mem, NULL);
+  vkFreeMemory    (vlk_dev, mem,   NULL);
+  vkDestroyBuffer (vlk_dev, buf,   NULL);
+  vkDestroyImage  (vlk_dev, img,   NULL);
 }
 
 #endif
