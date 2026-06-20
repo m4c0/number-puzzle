@@ -11,7 +11,7 @@ void vlk_reset();
 void vlk_mouse_down(int x, int y);
 void vlk_mouse_move(int x, int y);
 
-extern FILE * vlk_open(const char * name, const char * ext);
+extern unsigned vlk_open(const char * name, const char * ext, void ** ptr);
 
 #ifdef __APPLE__
 extern CAMetalLayer * vlk_metal_layer();
@@ -349,15 +349,8 @@ static void vlk_create_swc() {
 }
 
 static VkShaderModule vlk_create_shader_module(const char * name) {
-  FILE * f = vlk_open(name, "spv");
-  assert(f);
-  assert(0 == fseek(f, 0, SEEK_END));
-  long sz = ftell(f);
-  assert(sz && (sz % 4 == 0));
-  assert(0 == fseek(f, 0, SEEK_SET));
-  uint32_t * data = malloc(sz);
-  assert(1 == fread(data, sz, 1, f));
-  fclose(f);
+  void * data;
+  unsigned sz = vlk_open(name, "spv", &data);
 
   VkShaderModuleCreateInfo info = {
     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -367,8 +360,6 @@ static VkShaderModule vlk_create_shader_module(const char * name) {
 
   VkShaderModule mod;
   _(vkCreateShaderModule(vlk_dev, &info, NULL, &mod));
-
-  free(data);
   return mod;
 }
 
@@ -727,9 +718,12 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
   return cb;
 }
 
-static void vlk_load_atlas(FILE * f) {
+static void vlk_load_atlas(const char * name) {
+  void * f;
+  unsigned sz = vlk_open(name, "jpg", &f);
+
   int w, h, c;
-  stbi_uc * img = stbi_load_from_file(f, &w, &h, &c, 4);
+  stbi_uc * img = stbi_load_from_memory(f, sz, &w, &h, &c, 4);
   assert(w == 1024);
   assert(h == 1024);
 
@@ -739,7 +733,6 @@ static void vlk_load_atlas(FILE * f) {
   for (int i = 0; i < w * h * 4; i++) data[i] = img[i];
 
   vkUnmapMemory(vlk_dev, vlk_atlas.h_mem);
-  fclose(f);
 
   vlk_record_buf2img(vlk_atlas.h_buf, vlk_atlas.img, w, h);
 
@@ -1023,9 +1016,7 @@ void vlk_reset() {
   char buf[128];
   snprintf(buf, 128, "bg-%003d", n);
 
-  FILE * f = vlk_open(buf, "jpg");
-  vlk_load_atlas(f);
-  fclose(f);
+  vlk_load_atlas(buf);
 
   brd_init(4);
   sfx_shuffle();

@@ -2,11 +2,14 @@ app
 build-ios
 build-osx
 export
+shot.png
 *.app
 *.dylib
 *.exe
 *.o
 *.pch
 *.plist
+*.res
+*.spv
 *.xcarchive
 *.xcframework

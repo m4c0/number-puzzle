@@ -24,15 +24,15 @@ static int run(char ** args) {
   return 1;
 }
 
-static int cp(char * name) {
-  char * args[] = { "cmd", "/c", "copy", name, "app", 0 };
+static int shader(char * name) {
+  char spv[1024]; snprintf(spv, 1024, "%s.spv", name);
+
+  char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
   return run(args);
 }
 
-static int shader(char * name) {
-  char spv[1024]; snprintf(spv, 1024, "app/%s.spv", name);
-
-  char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
+static int rc() {
+  char * args[] = { "llvm-rc.exe", "/FO", "main.res", "main.rc", 0 };
   return run(args);
 }
 
@@ -70,7 +70,7 @@ static int hdr(char * src, char * o, char * d) {
 static int link_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
-    "-o", "app/puzzle.exe", 
+    "-o", "app/puzzle.exe", "main.res",
     "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "volk.o", "microui.o", "puzzle-win.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
@@ -105,20 +105,15 @@ int main(int argc, char ** argv) {
 
   if (cc_nopch("microui.c", "microui.o")) return 1;
 
+  if (shader("puzzle.frag")) return 1;
+  if (shader("puzzle.vert")) return 1;
+  if (rc()) return 1;
+
   if (cc("puzzle-win.c", "puzzle-win.o")) return 1;
   if (link_exe()) return 1;
 
-  if (cc("shots.c", "shots.o")) return 1;
-  if (link_shots_exe()) return 1;
-
-  if (shader("puzzle.frag")) return 1;
-  if (shader("puzzle.vert")) return 1;
-
-  for (int i = 1; i <= 31; i++) {
-    char buf[128];
-    snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
-    if (cp(buf)) return 1;
-  }
+  //if (cc("shots.c", "shots.o")) return 1;
+  //if (link_shots_exe()) return 1;
 
   return 0;
 }

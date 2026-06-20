@@ -5,15 +5,12 @@
 
 HWND vlk_hwnd;
 
-FILE * vlk_open(const char * name, const char * ext) {
-  char exe[MAX_PATH];
-  GetModuleFileName(NULL, exe, MAX_PATH);
+unsigned vlk_open(const char * name, const char * ext, void ** ptr) {
+  HRSRC r = FindResource(NULL, name, ext);
+  HGLOBAL g = LoadResource(NULL, r);
+  *ptr = LockResource(g);
 
-  char * p = strrchr(exe, '\\');
-  if (p) *p = 0;
-
-  char buf[MAX_PATH]; snprintf(buf, MAX_PATH, "%s\\%s.%s", exe, name, ext);
-  return fopen(buf, "rb");
+  return SizeofResource(NULL, r);
 }
 
 static char vlk_log_buf[1024];
