@@ -39,6 +39,13 @@ static LRESULT window_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) 
       PostQuitMessage(0);
       return 0;
 
+    case WM_MOUSEMOVE:
+      vlk_mouse_move(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
+      return 0;
+    case WM_LBUTTONDOWN:
+      vlk_mouse_down(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
+      return 0;
+
     case WM_ERASEBKGND:
       // i.e. "never erase background". Solves 99.999% of flicker issues
       return 1;
