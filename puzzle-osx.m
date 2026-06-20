@@ -69,21 +69,14 @@ CAMetalLayer * vlk_metal_layer() {
   return (CAMetalLayer *)[NSApplication sharedApplication].windows[0].contentView.layer;
 }
 
-FILE * vlk_open(const char * name, const char * ext) {
+__strong static NSData * last_resource;
+unsigned vlk_open(const char * name, const char * ext, const void ** ptr) {
   NSString * n = [NSString stringWithFormat:@"%s", name];
   NSString * e = [NSString stringWithFormat:@"%s", ext];
   NSString * path = [[NSBundle mainBundle] pathForResource:n ofType:e];
-  return fopen(path.UTF8String, "rb");
-}
-
-void sav_get_path(char * buf, unsigned buf_sz) {
-  NSArray * arr = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-  NSString * dir = [arr firstObject];
-  [[NSFileManager defaultManager] createDirectoryAtPath:dir
-                            withIntermediateDirectories:YES
-                                             attributes:nil
-                                                  error:nil];
-  strncpy(buf, dir.UTF8String, buf_sz);
+  last_resource = [NSData dataWithContentsOfFile:path];
+  *ptr = [last_resource bytes];
+  return [last_resource length];
 }
 
 void vlk_log(int r, const char * msg) {

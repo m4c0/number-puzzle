@@ -86,11 +86,14 @@ configurationForConnectingSceneSession:(UISceneSession *) connectingSceneSession
 
 CAMetalLayer * vlk_metal_layer() { return g_layer; }
 
-FILE * vlk_open(const char * name, const char * ext) {
+__strong static NSData * last_resource;
+unsigned vlk_open(const char * name, const char * ext, const void ** ptr) {
   NSString * n = [NSString stringWithFormat:@"%s", name];
   NSString * e = [NSString stringWithFormat:@"%s", ext];
   NSString * path = [[NSBundle mainBundle] pathForResource:n ofType:e];
-  return fopen(path.UTF8String, "rb");
+  last_resource = [NSData dataWithContentsOfFile:path];
+  *ptr = [last_resource bytes];
+  return [last_resource length];
 }
 
 void vlk_log(int r, const char * msg) {

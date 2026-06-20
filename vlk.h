@@ -11,7 +11,7 @@ void vlk_reset();
 void vlk_mouse_down(int x, int y);
 void vlk_mouse_move(int x, int y);
 
-extern unsigned vlk_open(const char * name, const char * ext, void ** ptr);
+extern unsigned vlk_open(const char * name, const char * ext, const void ** ptr);
 
 #ifdef __APPLE__
 extern CAMetalLayer * vlk_metal_layer();
@@ -349,7 +349,7 @@ static void vlk_create_swc() {
 }
 
 static VkShaderModule vlk_create_shader_module(const char * name) {
-  void * data;
+  const void * data;
   unsigned sz = vlk_open(name, "spv", &data);
 
   VkShaderModuleCreateInfo info = {
@@ -719,7 +719,7 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
 }
 
 static void vlk_load_atlas(const char * name) {
-  void * f;
+  const void * f;
   unsigned sz = vlk_open(name, "jpg", &f);
 
   int w, h, c;

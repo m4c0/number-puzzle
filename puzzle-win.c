@@ -5,7 +5,7 @@
 
 HWND vlk_hwnd;
 
-unsigned vlk_open(const char * name, const char * ext, void ** ptr) {
+unsigned vlk_open(const char * name, const char * ext, const void ** ptr) {
   HRSRC r = FindResource(NULL, name, ext);
   HGLOBAL g = LoadResource(NULL, r);
   *ptr = LockResource(g);
