@@ -12,6 +12,8 @@
 
 #define APP_PATH "export.xcarchive/Products/Applications/puzzle.app"
 
+#define UPLOAD 0
+
 static void usage() {
   fprintf(stderr, "just call 'build' without arguments\n");
 }
@@ -270,15 +272,17 @@ int main(int argc, char ** argv) {
     if (cp(buf)) return 1;
   }
 
+  if (getenv("IOS_BUILD_ONLY")) return 0;
+
   if (actool())   return 1;
   if (codesign()) return 1;
   if (symbols())  return 1;
   if (export())   return 1;
-#if 1
+#if UPLOAD
+  if (validate("--upload-app")) return 1;
+#else
   if (install())  return 1;
   if (validate("--validate-app")) return 1;
-#else
-  if (validate("--upload-app")) return 1;
 #endif
 
   return 0;
