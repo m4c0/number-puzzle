@@ -5,14 +5,26 @@
 #define W 2064
 #define H 2752
 
-FILE * vlk_open(const char * name, const char * ext) {
-  char buf[1024];
+unsigned vlk_open(const char * name, const char * ext, const void ** ptr) {
+  char fname[1024];
 #ifdef _WIN32
-  sprintf(buf, "app/%s.%s", name, ext);
+  sprintf(fname, "app/%s.%s", name, ext);
 #else
-  sprintf(buf, "puzzle.app/Contents/Resources/%s.%s", name, ext);
+  sprintf(fname, "puzzle.app/Contents/Resources/%s.%s", name, ext);
 #endif
-  return fopen(buf, "rb");
+  FILE * f = fopen(fname, "rb");
+
+  assert(0 == fseek(f, 0, SEEK_END));
+  long sz = ftell(f);
+  assert(sz);
+  assert(0 == fseek(f, 0, SEEK_SET));
+
+  void * data = malloc(sz + 1);
+  assert(1 == fread(data, sz, 1, f));
+  *ptr = data;
+
+  fclose(f);
+  return sz;
 }
 
 void vlk_log(int r, const char * msg) {
