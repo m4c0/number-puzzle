@@ -1,3 +1,5 @@
+IDI_APPICON ICON "icon.ico"
+
 bg-001 jpg "imgs\\bg-001.jpg"
 bg-002 jpg "imgs\\bg-002.jpg"
 bg-003 jpg "imgs\\bg-003.jpg"

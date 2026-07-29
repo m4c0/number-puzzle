@@ -89,6 +89,22 @@ static int link_shots_exe() {
   return run(args);
 }
 
+int icon() {
+  unsigned sz;
+  char * img = slurp("Assets.xcassets\\AppIcon.appiconset\\Icon-1024.png", &sz);
+
+  FILE * f = fopen("icon.ico", "wb");
+  fwrite("\0\0\1\0\1\0", 6, 1, f); // 0=Reserved; 1=ICO; 1 Image
+  fwrite("\0\0\0\0\0\0\x20\0", 8, 1, f); // W/H/C/Res. Planes/Bits
+
+  fwrite(&sz, 4, 1, f);
+  fwrite("\x16\0\0\0", 4, 1, f); // 20=offset from BOS
+  fwrite(img, sz, 1, f);
+
+  fclose(f);
+  return 0;
+}
+
 int main(int argc, char ** argv) {
   if (argc != 1) return (usage(), 1);
 
@@ -103,6 +119,7 @@ int main(int argc, char ** argv) {
 
   if (cc_nopch("microui.c", "microui.o")) return 1;
 
+  if (icon()) return 1;
   if (shader("puzzle.frag")) return 1;
   if (shader("puzzle.vert")) return 1;
   if (rc()) return 1;
