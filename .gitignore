@@ -2,7 +2,7 @@ app
 build-ios
 build-osx
 export
-shot.png
+shot*.png
 *.app
 *.dylib
 *.exe
