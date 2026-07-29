@@ -70,7 +70,7 @@ static int hdr(char * src, char * o, char * d) {
 static int link_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
-    "-o", "app/puzzle.exe", "main.res",
+    "-o", "puzzle.exe", "main.res",
     "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "volk.o", "microui.o", "puzzle-win.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
@@ -81,7 +81,7 @@ static int link_exe() {
 static int link_shots_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
-    "-o", "app/shots.exe", 
+    "-o", "shots.exe", 
     "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "volk.o", "microui.o", "shots.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
@@ -91,8 +91,6 @@ static int link_shots_exe() {
 
 int main(int argc, char ** argv) {
   if (argc != 1) return (usage(), 1);
-
-  _mkdir("app");
 
   if (pch()) return 1;
 
@@ -112,8 +110,8 @@ int main(int argc, char ** argv) {
   if (cc("puzzle-win.c", "puzzle-win.o")) return 1;
   if (link_exe()) return 1;
 
-  //if (cc("shots.c", "shots.o")) return 1;
-  //if (link_shots_exe()) return 1;
+  if (cc("shots.c", "shots.o")) return 1;
+  if (link_shots_exe()) return 1;
 
   return 0;
 }
