@@ -138,8 +138,8 @@ int main(int argc, char ** argv) {
   if (cc_nopch("microui.c", "microui.o")) return 1;
 
   if (icon()) return 1;
-  if (shader("puzzle.frag")) return 1;
-  if (shader("puzzle.vert")) return 1;
+  if (shader("shader.frag")) return 1;
+  if (shader("shader.vert")) return 1;
   if (rc()) return 1;
 
   if (cc("puzzle-win.c", "puzzle-win.o")) return 1;

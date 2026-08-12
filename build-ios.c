@@ -259,8 +259,8 @@ int main(int argc, char ** argv) {
   if (cm("puzzle-ios.m", "puzzle-ios.o")) return 1;
   if (link_exe()) return 1;
 
-  if (shader("puzzle.frag")) return 1;
-  if (shader("puzzle.vert")) return 1;
+  if (shader("shader.frag")) return 1;
+  if (shader("shader.vert")) return 1;
 
   if (apply("export.plist.in",    "export.plist")) return 1;
   if (apply("xcarchive.plist.in", "export.xcarchive/Info.plist")) return 1;
