@@ -1,0 +1,126 @@
+#ifndef BUILD_H
+#define BUILD_H
+
+#define APP "puzzle"
+
+#ifdef __APPLE__
+#  include <sys/stat.h>
+#  include <unistd.h>
+#elif _WIN32
+#  define _CRT_SECURE_NO_WARNINGS
+#  define _CRT_NONSTDC_NO_WARNINGS
+#  include <direct.h>
+#  include <process.h>
+#endif
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static inline char * slurp(const char * file, unsigned * osz) {
+  FILE * f = fopen(file, "rb");
+  assert(f);
+
+  assert(0 == fseek(f, 0, SEEK_END));
+  long sz = ftell(f);
+  assert(sz);
+  assert(0 == fseek(f, 0, SEEK_SET));
+
+  char * data = malloc(sz + 1);
+  assert(1 == fread(data, sz, 1, f));
+  data[sz] = 0;
+
+  fclose(f);
+  if (osz) *osz = sz;
+  return data;
+}
+
+static void print_key(FILE * f, const char * key);
+static inline int apply(char * src, char * tgt) {
+  char * file = slurp(src, NULL); // TODO: use size instead of cstr
+
+  FILE * f = fopen(tgt, "wb");
+  assert(f);
+
+  char * p = file;
+  while (*p) {
+    p = strchr(file, '&');
+    if (!p) break;
+
+    assert(1 == fwrite(file, p-file, 1, f));
+    file = ++p;
+
+    char * pp = strchr(p, ';');
+    if (!pp) {
+      assert(0 == fputc('&', f));
+      file++;
+      continue;
+    }
+    *pp = 0;
+
+    print_key(f, p);
+
+    file = ++pp;
+  }
+
+  assert(fprintf(f, "%s", file));
+  fclose(f);
+  return 0;
+}
+
+static int compile_common();
+static int link_exe();
+static int compile_and_link_exe() {
+  if (compile_common()) return 1;
+  if (link_exe()) return 1;
+  return 0;
+}
+
+int run(char ** args) {
+  assert(args && args[0]);
+
+#ifdef __APPLE__
+  pid_t pid = fork();
+  if (pid == 0) {
+    execvp(args[0], args);
+    abort();
+  } else if (pid > 0) {
+    int sl = 0;
+    assert(0 <= waitpid(pid, &sl, 0));
+    if (WIFEXITED(sl)) return WEXITSTATUS(sl);
+  }
+#elif _WIN32
+  if (0 == _spawnvp(_P_WAIT, args[0], (const char * const *)args)) {
+    return 0;
+  }
+#endif
+
+  fprintf(stderr, "failed to run child process: %s\n", args[0]);
+  return 1;
+}
+#define RUN(...) do { char * args[] = { __VA_ARGS__, 0 }; if (run(args)) return 1; } while (0)
+
+#define CC1(src, o, ...) RUN("clang", "-Wall", __VA_ARGS__, "-o", o, "-c", src)
+#define HDR(src, d) CC1(src".h", src".o", "-x", "c", "-D", d, "-include-pch", "pch.pch", CFLAGS)
+#define CC(src) CC1(src".c", src".o", "-include-pch", "pch.pch", CFLAGS)
+#define CM(src) CC1(src".m", src".o", CFLAGS)
+
+#define SHADER(src) RUN("glslang", "-V", src, "-o", src ".spv")
+
+static int compile_common() {
+  HDR("gme", "GME_IMPL");
+  HDR("sfx", "SFX_IMPL");
+  HDR("snd", "SND_IMPL");
+  return 0;
+}
+
+static int shaders() {
+  SHADER("shader.frag");
+  SHADER("shader.vert");
+  return 0;
+}
+
+#define OBJS "gme.o", "sfx.o", "snd.o"
+
+#endif

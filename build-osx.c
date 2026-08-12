@@ -1,29 +1,10 @@
-#include <sys/stat.h>
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#define CFLAGS "-g"
+#define RES_PATH(X) X".app/Contents/Resources"
+#include "build.h"
 
-static void usage() {
-  fprintf(stderr, "just call 'build' without arguments\n");
-}
+#define CROSS(X) RUN("spirv-cross", "shader."X".spv", "--msl", "--output", APP".app/Contents/Resources/shader."X".metal", "--flip-vert-y");
 
-static int run(char ** args) {
-  assert(args && args[0]);
-
-  pid_t pid = fork();
-  if (pid == 0) {
-    execvp(args[0], args);
-    abort();
-  } else if (pid > 0) {
-    int sl = 0;
-    assert(0 <= waitpid(pid, &sl, 0));
-    if (WIFEXITED(sl)) return WEXITSTATUS(sl);
-  }
-
-  fprintf(stderr, "failed to run child process: %s\n", args[0]);
-  return 1;
-}
+static void print_key(FILE * f, const char * key) {}
 
 static int cp(char * name) {
   char * args[] = { "cp", name, "puzzle.app/Contents/Resources", 0 };
@@ -115,8 +96,6 @@ static int app(const char * n) {
 }
 
 int main(int argc, char ** argv) {
-  if (argc != 1) return (usage(), 1);
-
   if (pch()) return 1;
 
   if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
