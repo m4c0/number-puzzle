@@ -11,12 +11,6 @@ static int cp(char * name) {
   return run(args);
 }
 
-static int shader(char * name) {
-  char spv[1024]; snprintf(spv, 1024, "puzzle.app/Contents/Resources/%s.spv", name);
-  char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
-  return run(args);
-}
-
 static int pch() {
   char * args[] = {
     "clang", "-Wall", "-g", "-x", "c-header",
@@ -112,8 +106,7 @@ int main(int argc, char ** argv) {
   if (cc("shots.c", "shots.o")) return 1;
   if (link_shots_exe()) return 1;
 
-  if (shader("shader.frag")) return 1;
-  if (shader("shader.vert")) return 1;
+  if (shaders()) return 1;
 
   for (int i = 1; i <= 31; i++) {
     char buf[128];

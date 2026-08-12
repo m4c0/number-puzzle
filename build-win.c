@@ -42,13 +42,6 @@ static int run(char ** args) {
   return 1;
 }
 
-static int shader(char * name) {
-  char spv[1024]; snprintf(spv, 1024, "%s.spv", name);
-
-  char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
-  return run(args);
-}
-
 static int rc() {
   char * args[] = { "llvm-rc.exe", "/FO", "main.res", "main.rc", 0 };
   return run(args);
@@ -136,8 +129,7 @@ int main(int argc, char ** argv) {
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
 
   if (icon()) return 1;
-  if (shader("shader.frag")) return 1;
-  if (shader("shader.vert")) return 1;
+  if (shaders()) return 1;
   if (rc()) return 1;
 
   if (cc("puzzle-win.c", "puzzle-win.o")) return 1;

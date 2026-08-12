@@ -1,16 +1,10 @@
-#include <sys/stat.h>
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 // You can get this path with 'xcrun --show-sdk-path --sdk iphoneos'
 #define SDK_PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
 #define TARGET "arm64-apple-ios26.0"
 
-#define APP_PATH "export.xcarchive/Products/Applications/puzzle.app"
+#define CFLAGS "-g", "-O3", "-target", TARGET, "-isysroot", SDK_PATH
+#define RES_PATH(X) "export.xcarchive/Products/Applications/"X".app"
+#include "build.h"
 
 #define UPLOAD 0
 
@@ -90,14 +84,6 @@ static int apply(char * src, char * tgt) {
   assert(fprintf(f, "%s", file));
   fclose(f);
   return 0;
-}
-
-static int shader(char * name) {
-  char spv[1024];
-  sprintf(spv, APP_PATH "/%s.spv", name);
-
-  char * args[] = { "glslang", "-V", name, "-o", spv, 0 };
-  return run(args);
 }
 
 static int codesign() {
@@ -257,8 +243,7 @@ int main(int argc, char ** argv) {
   if (cm("puzzle-ios.m", "puzzle-ios.o")) return 1;
   if (link_exe()) return 1;
 
-  if (shader("shader.frag")) return 1;
-  if (shader("shader.vert")) return 1;
+  if (shaders()) return 1;
 
   if (apply("export.plist.in",    "export.plist")) return 1;
   if (apply("xcarchive.plist.in", "export.xcarchive/Info.plist")) return 1;
