@@ -6,101 +6,44 @@
 #define RES_PATH(X) "export.xcarchive/Products/Applications/"X".app"
 #include "build.h"
 
-#define UPLOAD 0
+#include <time.h>
 
-static void usage() {
-  fprintf(stderr, "just call 'build' without arguments\n");
-}
+static time_t bundle_version;
+static int uploading;
 
-static char * slurp(const char * file) {
-  FILE * f = fopen(file, "rb");
-  assert(f);
-
-  assert(0 == fseek(f, 0, SEEK_END));
-  long sz = ftell(f);
-  assert(sz);
-  assert(0 == fseek(f, 0, SEEK_SET));
-
-  char * data = malloc(sz + 1);
-  assert(1 == fread(data, sz, 1, f));
-  data[sz] = 0;
-
-  fclose(f);
-  return data;
-}
-
-static int run(char ** args) {
-  assert(args && args[0]);
-
-  pid_t pid = fork();
-  if (pid == 0) {
-    execvp(args[0], args);
-    abort();
-  } else if (pid > 0) {
-    int sl = 0;
-    assert(0 <= waitpid(pid, &sl, 0));
-    if (WIFEXITED(sl)) return WEXITSTATUS(sl);
-  }
-
-  fprintf(stderr, "failed to run child process: %s\n", args[0]);
-  return 1;
-}
-
-static int apply(char * src, char * tgt) {
-  char * file = slurp(src);
-
-  FILE * f = fopen(tgt, "wb");
-  assert(f);
-
-  char * p = file;
-  while (*p) {
-    p = strchr(file, '&');
-    if (!p) break;
-
-    assert(1 == fwrite(file, p-file, 1, f));
-    file = ++p;
-
-    char * pp = strchr(p, ';');
-    if (!pp) {
-      assert(0 == fputc('&', f));
-      file++;
-      continue;
-    }
-    *pp = 0;
-
-    char * env = getenv(p);
-    if (strncmp(p, "IOS_", 4)) {
-      assert(fprintf(f, "&%s;", file));
-      file = ++pp;
-    } else if (env) {
-      assert(fprintf(f, "%s", env));
-      file = ++pp;
+static void print_key(FILE * f, const char * p) {
+  char * env = getenv(p);
+  if (strncmp(p, "IOS_", 4)) {
+    assert(fprintf(f, "&%s;", p));
+  } else if (0 == strcmp(p, "IOS_APP_NAME")) {
+    assert(fprintf(f, APP));
+  } else if (0 == strcmp(p, "IOS_BUNDLE_VERSION")) {
+    assert(fprintf(f, "%ld", bundle_version));
+  } else if (0 == strcmp(p, "IOS_METHOD")) {
+    if (uploading) {
+      assert(fprintf(f, "app-store-connect"));
     } else {
-      fprintf(stderr, "Missing environment: %s\n", p);
-      exit(1);
+      assert(fprintf(f, "debugging"));
     }
+  } else if (env) {
+    assert(fprintf(f, "%s", env));
+  } else {
+    fprintf(stderr, "Missing environment: %s\n", p);
+    exit(1);
   }
-
-  assert(fprintf(f, "%s", file));
-  fclose(f);
-  return 0;
 }
 
 static int codesign() {
   char * team = getenv("IOS_TEAM");
   assert(team && "Missing IOS_TEAM environment variable");
 
-  char * args[] = { "codesign", "-f", "-s", strdup(team), APP_PATH, 0 };
-  return run(args);
+  RUN("codesign", "-f", "-s", strdup(team), RES_PATH(APP));
+  return 0;
 }
  
 static int symbols() {
-  char * args[] = {
-    "dsymutil", 
-    APP_PATH "/puzzle", 
-    "-o", "export.xcarchive/dSYMS/puzzle.app.dSYM",
-    0 };
-  return run(args);
+  RUN("dsymutil", RES_PATH(APP)"/"APP, "-o", "export.xcarchive/dSYMS/"APP".app.dSYM");
+  return 0;
 }
 
 static int export() {
@@ -130,7 +73,7 @@ static int actool() {
     "--development-region", "en",
     "--minimum-deployment-target", "26",
     "--output-partial-info-plist", "icon-partial.plist",
-    "--compile", APP_PATH,
+    "--compile", RES_PATH(APP),
     "Assets.xcassets",
     0
   };
@@ -210,7 +153,7 @@ static int link_exe() {
     "-framework", "MetalKit",
     "-framework", "QuartzCore",
     "-framework", "UIKit",
-    "-o", APP_PATH "/puzzle", 
+    "-o", RES_PATH(APP)"/"APP, 
     "sfx.o", "snd.o", "vlk.o",
     "stb_image.o", "puzzle-ios.o",
     "MoltenVK.xcframework/ios-arm64/libMoltenVK.a",
@@ -219,18 +162,14 @@ static int link_exe() {
   return run(args);
 }
 
-static int cp(char * name) {
-  char * args[] = { "cp", name, APP_PATH, 0 };
-  return run(args);
-}
-
 int main(int argc, char ** argv) {
-  if (argc != 1) return (usage(), 1);
+  bundle_version = time(NULL);
+  uploading = getenv("IOS_UPLOAD") != NULL;
 
   mkdir("export.xcarchive", 0777);
   mkdir("export.xcarchive/Products", 0777);
   mkdir("export.xcarchive/Products/Applications", 0777);
-  mkdir(APP_PATH, 0777);
+  mkdir(RES_PATH(APP), 0777);
 
   if (pch()) return 1;
 
@@ -252,7 +191,7 @@ int main(int argc, char ** argv) {
   for (int i = 1; i <= 31; i++) {
     char buf[128];
     snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
-    if (cp(buf)) return 1;
+    RUN("cp", buf, RES_PATH(APP));
   }
 
   if (getenv("IOS_BUILD_ONLY")) return 0;
@@ -261,12 +200,13 @@ int main(int argc, char ** argv) {
   if (codesign()) return 1;
   if (symbols())  return 1;
   if (export())   return 1;
-#if UPLOAD
-  if (validate("--upload-app")) return 1;
-#else
-  if (install())  return 1;
-  if (validate("--validate-app")) return 1;
-#endif
+
+  if (uploading) {
+    if (validate("--upload-app")) return 1;
+  } else {
+    if (install()) return 1;
+    if (validate("--validate-app")) return 1;
+  }
 
   return 0;
 }
