@@ -90,7 +90,7 @@ static int link_exe() {
     "clang", "-Wall", OPT,
     "-o", "puzzle.exe", "main.res",
     "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "microui.o", "puzzle-win.o",
+    "stb_image.o", "volk.o", "puzzle-win.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
     0 };
   return run(args);
@@ -101,7 +101,7 @@ static int link_shots_exe() {
     "clang", "-Wall", OPT,
     "-o", "shots.exe", 
     "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "microui.o", "shots.o",
+    "stb_image.o", "volk.o", "shots.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
     0 };
   return run(args);
@@ -134,8 +134,6 @@ int main(int argc, char ** argv) {
   if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
   if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
   if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
-
-  if (cc_nopch("microui.c", "microui.o")) return 1;
 
   if (icon()) return 1;
   if (shader("shader.frag")) return 1;
