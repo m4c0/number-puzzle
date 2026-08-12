@@ -570,8 +570,8 @@ static void vlk_create_pipeline_layout() {
 }
 
 static void vlk_create_pipeline() {
-  VkShaderModule vert = vlk_create_shader_module("puzzle.vert");
-  VkShaderModule frag = vlk_create_shader_module("puzzle.frag");
+  VkShaderModule vert = vlk_create_shader_module("shader.vert");
+  VkShaderModule frag = vlk_create_shader_module("shader.frag");
 
   VkGraphicsPipelineCreateInfo ppl_info = {
     .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
