@@ -1,46 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
-#include <sys/stat.h>
-#include <assert.h>
-#include <direct.h>
-#include <process.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 //#define OPT "-gdwarf"
 #define OPT "-O3"
 
-static void usage() {
-  fprintf(stderr, "just call 'build' without arguments\n");
-}
+#define CFLAGS OPT
+#define RES_PATH(X) "."
+#include "build.h"
 
-static char * slurp(const char * file, unsigned * sz_ptr) {
-  FILE * f = fopen(file, "rb");
-  assert(f);
-
-  assert(0 == fseek(f, 0, SEEK_END));
-  long sz = ftell(f);
-  assert(sz);
-  assert(0 == fseek(f, 0, SEEK_SET));
-
-  char * data = malloc(sz + 1);
-  assert(1 == fread(data, sz, 1, f));
-  data[sz] = 0;
-
-  fclose(f);
-  *sz_ptr = sz;
-  return data;
-}
-
-static int run(char ** args) {
-  assert(args && args[0]);
-
-  if (0 == _spawnvp(_P_WAIT, args[0], (const char * const *)args)) {
-    return 0;
-  }
-
-  fprintf(stderr, "failed to run child process: %s\n", args[0]);
-  return 1;
-}
+#define CROSS(X) RUN("spirv-cross", "shader."X".spv", "--hlsl", "--output", "shader."X".hlsl", "--shader-model", "50", "--flip-vert-y");
 
 static int rc() {
   char * args[] = { "llvm-rc.exe", "/FO", "main.res", "main.rc", 0 };
@@ -54,12 +19,6 @@ static int pch() {
     "-D", "VK_USE_PLATFORM_WIN32_KHR",
     "-D", "VLK_USE_VOLK",
     "-o", "pch.pch", "pch.h", 0 };
-  return run(args);
-}
-
-static int cc_nopch(char * src, char * o) {
-  char * args[] = {
-    "clang", "-Wall", OPT, "-o", o, "-c", src, 0 };
   return run(args);
 }
 
@@ -117,8 +76,6 @@ int icon() {
 }
 
 int main(int argc, char ** argv) {
-  if (argc != 1) return (usage(), 1);
-
   if (pch()) return 1;
 
   if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
