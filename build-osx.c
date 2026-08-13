@@ -6,11 +6,6 @@
 
 static void print_key(FILE * f, const char * key) {}
 
-static int cp(char * name) {
-  char * args[] = { "cp", name, "puzzle.app/Contents/Resources", 0 };
-  return run(args);
-}
-
 static int pch() {
   char * args[] = {
     "clang", "-Wall", "-g", "-x", "c-header",
@@ -21,30 +16,6 @@ static int pch() {
   return run(args);
 }
 
-static int cc(char * src, char * o) {
-  char * args[] = {
-    "clang", "-Wall", "-g", "-include-pch", "pch.pch",
-    "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
-static int cm(char * src, char * o) {
-  // It's nearly mandatory to use "modules" with ObjC.
-  // The compilation speed without it is abismal.
-  char * args[] = {
-    "clang", "-Wall", "-g", "-fmodules",
-    "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
-static int hdr(char * src, char * o, char * d) {
-  char * args[] = {
-    "clang", "-Wall", "-x", "c", "-g", "-include-pch", "pch.pch",
-    "-D", d, "-o", o, "-c", src, 0
-  };
-  return run(args);
-}
-
 static int link_exe() {
   char * args[] = {
     "clang", "-Wall",
@@ -52,8 +23,7 @@ static int link_exe() {
     "-framework", "AudioToolbox",
     "-framework", "MetalKit",
     "-o", "puzzle.app/Contents/MacOS/puzzle", 
-    "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "puzzle-osx.o",
+    OBJS, "vlk.o", "stb_image.o", "volk.o", "puzzle-osx.o",
     0 };
   return run(args);
 }
@@ -65,8 +35,7 @@ static int link_shots_exe() {
     "-framework", "AudioToolbox",
     "-framework", "MetalKit",
     "-o", "puzzle.app/Contents/MacOS/shots", 
-    "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "shots.o",
+    OBJS, "vlk.o", "stb_image.o", "volk.o", "shots.o",
     0 };
   return run(args);
 }
@@ -92,18 +61,15 @@ static int app(const char * n) {
 int main(int argc, char ** argv) {
   if (pch()) return 1;
 
-  if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
-  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION"))      return 1;
-
-  if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
-  if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
-  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
+  HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
+  HDR("volk",      "VOLK_IMPLEMENTATION");
+  HDR("vlk",       "VLK_IMPL");
 
   if (app("puzzle")) return 1;
-  if (cm("puzzle-osx.m", "puzzle-osx.o")) return 1;
-  if (link_exe()) return 1;
+  CM("puzzle-osx");
+  if (compile_and_link_exe()) return 1;
 
-  if (cc("shots.c", "shots.o")) return 1;
+  CC("shots");
   if (link_shots_exe()) return 1;
 
   if (shaders()) return 1;
@@ -111,7 +77,7 @@ int main(int argc, char ** argv) {
   for (int i = 1; i <= 31; i++) {
     char buf[128];
     snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
-    if (cp(buf)) return 1;
+    RUN("cp", buf, "puzzle.app/Contents/Resources");
   }
 
   return 0;
