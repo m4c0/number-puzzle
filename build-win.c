@@ -17,13 +17,6 @@ static int pch() {
   return run(args);
 }
 
-static int cc(char * src, char * o) {
-  char * args[] = {
-    "clang", "-Wall", OPT, "-include-pch", "pch.pch",
-    "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
 static int link_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
@@ -76,10 +69,10 @@ int main(int argc, char ** argv) {
   if (shaders()) return 1;
   RUN("llvm-rc", "/FO", "main.res", "main.rc");
 
-  if (cc("puzzle-win.c", "puzzle-win.o")) return 1;
+  CC("puzzle-win");
   if (link_exe()) return 1;
 
-  if (cc("shots.c", "shots.o")) return 1;
+  CC("shots");
   if (link_shots_exe()) return 1;
 
   return 0;
