@@ -7,11 +7,6 @@
 
 #define CROSS(X) RUN("spirv-cross", "shader."X".spv", "--hlsl", "--output", "shader."X".hlsl", "--shader-model", "50", "--flip-vert-y");
 
-static int rc() {
-  char * args[] = { "llvm-rc.exe", "/FO", "main.res", "main.rc", 0 };
-  return run(args);
-}
-
 static int pch() {
   char * args[] = {
     "clang", "-Wall", OPT, "-x", "c-header",
@@ -26,14 +21,6 @@ static int cc(char * src, char * o) {
   char * args[] = {
     "clang", "-Wall", OPT, "-include-pch", "pch.pch",
     "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
-static int hdr(char * src, char * o, char * d) {
-  char * args[] = {
-    "clang", "-Wall", "-x", "c", OPT, "-include-pch", "pch.pch",
-    "-D", d, "-o", o, "-c", src, 0
-  };
   return run(args);
 }
 
@@ -78,16 +65,16 @@ int icon() {
 int main(int argc, char ** argv) {
   if (pch()) return 1;
 
-  if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
-  if (hdr("volk.h",      "volk.o",      "VOLK_IMPLEMENTATION"))      return 1;
+  HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
+  HDR("volk",      "VOLK_IMPLEMENTATION");
 
-  if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
-  if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
-  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
+  HDR("sfx", "SFX_IMPL");
+  HDR("snd", "SND_IMPL");
+  HDR("vlk", "VLK_IMPL");
 
   if (icon()) return 1;
   if (shaders()) return 1;
-  if (rc()) return 1;
+  RUN("llvm-rc", "/FO", "main.res", "main.rc");
 
   if (cc("puzzle-win.c", "puzzle-win.o")) return 1;
   if (link_exe()) return 1;
