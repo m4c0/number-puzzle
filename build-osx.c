@@ -29,7 +29,7 @@ static int link_shots_exe() {
     "-framework", "Metal",
     "-framework", "MetalKit",
     "-o", APP".app/Contents/MacOS/shots", 
-    OBJS, "stb_image.o", "shots-osx.o");
+    OBJS, "shots-osx.o");
   return 0;
 }
 
@@ -42,9 +42,6 @@ int main(int argc, char ** argv) {
 
   if (pch()) return 1;
 
-  // It's nearly mandatory to use "modules" with ObjC.
-  // The compilation speed without it is abismal.
-  HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
   CM("app-osx");
   if (compile_and_link_exe()) return 1;
   if (shaders()) return 1;
@@ -53,6 +50,12 @@ int main(int argc, char ** argv) {
 
   CM("shots-osx");
   if (link_shots_exe()) return 1;
+
+  for (int i = 1; i <= 31; i++) {
+    char buf[128];
+    snprintf(buf, 128, "imgs/bg-%003d.jpg", i);
+    RUN("cp", buf, RES_PATH(APP));
+  }
 
   return 0;
 }

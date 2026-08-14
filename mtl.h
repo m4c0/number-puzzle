@@ -2,6 +2,7 @@
 #import <MetalKit/MetalKit.h>
 
 #include "gme.h"
+#include "stb_image.h"
 
 static id<MTLLibrary> load_library(id<MTLDevice> device, NSString * name) {
   NSString * path = [[NSBundle mainBundle] pathForResource:name ofType:@"metal"];
@@ -16,7 +17,23 @@ static id<MTLLibrary> load_library(id<MTLDevice> device, NSString * name) {
   return lib;
 }
 
+static id<MTLTexture> texture;
 void gme_load_atlas(const char * name) {
+  NSString * n = [NSString stringWithFormat:@"%s", name];
+  NSString * path = [[NSBundle mainBundle] pathForResource:n ofType:@"jpg"];
+  NSData * data = [NSData dataWithContentsOfFile:path];
+  const void * bytes = [data bytes];
+  unsigned len = [data length];
+
+  int w, h, c;
+  stbi_uc * img = stbi_load_from_memory(bytes, len, &w, &h, &c, 4);
+  assert(w == 1024);
+  assert(h == 1024);
+
+  MTLRegion r = { {0,0,0}, {1024,1024,1} };
+  [texture replaceRegion:r mipmapLevel:0 withBytes:bytes bytesPerRow:1024*4];
+
+  stbi_image_free(img);
 }
 
 @interface POCStuff : NSObject
@@ -52,7 +69,7 @@ void gme_load_atlas(const char * name) {
   td.pixelFormat = MTLPixelFormatRGBA8Unorm;
   td.width       = 1024;
   td.height      = 1024;
-  d.texture = [device newTextureWithDescriptor:td];
+  texture = d.texture = [device newTextureWithDescriptor:td];
 
   MTLSamplerDescriptor * sd = [MTLSamplerDescriptor new];
   sd.minFilter = sd.magFilter = MTLSamplerMinMagFilterLinear;
