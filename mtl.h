@@ -73,8 +73,8 @@ void gme_load_atlas(const char * name) {
 
   id<MTLRenderCommandEncoder> enc = [cb renderCommandEncoderWithDescriptor:rpd];
   [enc setRenderPipelineState:self.pipeline];
-  [enc setVertexBytes:&gme_pc length:sizeof(gme_upc_t) atIndex:0];
-  [enc setFragmentBytes:&gme_pc length:sizeof(gme_upc_t) atIndex:0];
+  [enc setVertexBytes:gme_pc() length:sizeof(gme_upc_t) atIndex:0];
+  [enc setFragmentBytes:gme_pc() length:sizeof(gme_upc_t) atIndex:0];
   [enc setFragmentBuffer:self.grid offset:0 atIndex:1];
   [enc setFragmentTexture:self.texture atIndex:0];
   [enc setFragmentSamplerState:self.sampler atIndex:0];

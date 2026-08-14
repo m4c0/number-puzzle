@@ -72,10 +72,6 @@ void gme_load(void * tgt) {
 }
 
 static float gme_mouse(float p, float a) {
-#ifdef __APPLE__
-  p *= 2;
-#endif
-
   p = p * 2 - 1;
   p *= a;
 

@@ -104,7 +104,7 @@ static void run() {
   // Apple menu
   NSMenu * menu = [NSMenu new];
   [menu       addItem:[[NSMenuItem alloc]
-        initWithTitle:@"Quit Sokoban"
+        initWithTitle:@"Quit Puzzle"
                action:@selector(terminate:)
         keyEquivalent:@"q"]];
 
