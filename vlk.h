@@ -7,10 +7,6 @@ void vlk_deinit();
 
 void * vlk_headless(int w, int h);
 
-void vlk_reset();
-void vlk_mouse_down(int x, int y);
-void vlk_mouse_move(int x, int y);
-
 extern unsigned vlk_open(const char * name, const char * ext, const void ** ptr);
 
 #ifdef __APPLE__
@@ -20,22 +16,8 @@ extern HWND vlk_hwnd;
 #endif
 
 #ifdef VLK_IMPL
-#include "Vulkan-Headers/include/vulkan/vulkan_core.h"
-
-#include "brd.h"
+#include "gme.h"
 #include "stb_image.h"
-#include "sfx.h"
-#include "snd.h"
-#include "tim.h"
-
-typedef struct vlk_upc_s {
-  float    aspect_x, aspect_y;
-  float    time;
-  float    won;
-  unsigned sel_id;
-  unsigned brd_w;
-} vlk_upc_t;
-static vlk_upc_t vlk_pc;
 
 static VkCommandPool      vlk_cpool;
 static VkDevice           vlk_dev;
@@ -58,8 +40,6 @@ static VkSampler             vlk_smp;
 
 static VkBuffer       vlk_board_buf;
 static VkDeviceMemory vlk_board_mem;
-
-static int vlk_board_load = 1;
 
 #define MAX_SWAPCHAIN_IMAGES 8
 typedef struct vlk_swc {
@@ -563,7 +543,7 @@ static void vlk_create_pipeline_layout() {
     .pushConstantRangeCount = 1,
     .pPushConstantRanges = (VkPushConstantRange[]) {{
       .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-      .size       = sizeof(vlk_upc_t),
+      .size       = sizeof(gme_upc_t),
     }},
   };
   _(vkCreatePipelineLayout(vlk_dev, &info, NULL, &vlk_pl));
@@ -718,7 +698,7 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int 
   return cb;
 }
 
-static void vlk_load_atlas(const char * name) {
+void gme_load_atlas(const char * name) {
   const void * f;
   unsigned sz = vlk_open(name, "jpg", &f);
 
@@ -766,7 +746,7 @@ static void vlk_update_descriptor_sets() {
 }
 
 void vlk_create_board() {
-  const VkDeviceSize sz = sizeof(brd);
+  const VkDeviceSize sz = GME_BUF_SIZE;
   vlk_board_buf = vlk_create_buffer(sz, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   vlk_board_mem = vlk_allocate_memory(sz, vlk_find_local_memory());
   _(vkBindBufferMemory(vlk_dev, vlk_board_buf, vlk_board_mem, 0));
@@ -811,17 +791,13 @@ void vlk_init(int surf) {
   vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8G8B8A8_UNORM);
   vlk_update_descriptor_sets();
 
-  vlk_pc.won = 1;
-  vlk_reset();
-
-  sfx_init();
-  snd_init(sfx_filler);
+  gme_init();
 }
 
 void vlk_deinit() {
   vkDeviceWaitIdle(vlk_dev);
 
-  snd_deinit();
+  gme_deinit();
 
   vlk_destroy_swc(&vlk_swc);
   vlk_destroy_swc(&vlk_swc_old);
@@ -851,12 +827,9 @@ void vlk_deinit() {
 }
 
 static void vlk_record(VkCommandBuffer cb) {
-  float a = (float)vlk_ext.width / (float)vlk_ext.height;
-  vlk_pc.aspect_x = a > 1 ? a : 1;
-  vlk_pc.aspect_y = a > 1 ? 1 : (1.0 / a);
-  vlk_pc.time = tim_now();
+  gme_frame();
 
-  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &vlk_pc);
+  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(gme_upc_t), gme_pc());
   vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
   vkCmdDraw(cb, 3, 1, 0, 0);
@@ -869,10 +842,7 @@ static void vlk_record_cmdbuf(int i) {
   };
   vkBeginCommandBuffer(cb, &binfo);
 
-  if (vlk_board_load) {
-    vkCmdUpdateBuffer(cb, vlk_board_buf, 0, brd_w2 * sizeof(int), brd);
-    vlk_board_load = 0;
-  }
+  vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data());
 
   VkClearValue clear = {
     .color = {{ 0.1, 0.2, 0.3, 1 }},
@@ -951,81 +921,6 @@ void vlk_frame() {
   } else {
     vlk_create_swc();
   }
-}
-
-static float vlk_mouse(float p, float a) {
-#ifdef __APPLE__
-  p *= 2;
-#endif
-
-  p = p * 2 - 1;
-  p *= a;
-
-  p /= 0.9;
-  p = p * 0.5 + 0.5;
-  p *= brd_w;
-  return p;
-}
-void vlk_mouse_move(int x, int y) {
-  if (vlk_pc.won) return;
-
-  float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
-  float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
-  
-  if (px < 0 || px >= brd_w || py < 0 || py >= brd_w) px = py = 10;
-  vlk_pc.sel_id = (int)px + (int)py * brd_w;
-}
-static int vlk_board_swap(int a, int dx, int dy) {
-  int bx = dx + (a % brd_w);
-  int by = dy + (a / brd_w);
-  if (bx < 0 || bx >= brd_w || by < 0 || by >= brd_w) return 0;
-  int b = by * brd_w + bx;
-  
-  if (b >= brd_w2) return 0;
-  if (brd[b]) return 0;
-
-  int won = brd_swap(a, b);
-  vlk_pc.sel_id = 1000;
-  vlk_pc.won = won ? tim_now() : 0;
-  vlk_board_load = 1;
-  if (vlk_pc.won) sfx_win(); else sfx_move();
-  return 1;
-}
-void vlk_mouse_down(int x, int y) {
-  if (vlk_pc.won) {
-    float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
-    float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
-    if (px > brd_w || py > brd_w) vlk_reset();
-    return;
-  }
-
-  int id = vlk_pc.sel_id;
-  if (id >= brd_w2) return;
-
-  if (vlk_board_swap(id, +1,  0)) return;
-  if (vlk_board_swap(id, -1,  0)) return;
-  if (vlk_board_swap(id,  0, +1)) return;
-  if (vlk_board_swap(id,  0, -1)) return;
-}
-
-#define VLK_ATLAS_COUNT 31
-void vlk_reset() {
-  if (!vlk_pc.won) return;
-
-  int n = 1 + (rand() % VLK_ATLAS_COUNT);
-  char buf[128];
-  snprintf(buf, 128, "bg-%003d", n);
-
-  vlk_load_atlas(buf);
-
-  brd_init(4);
-  sfx_shuffle();
-
-  vlk_pc.won    = 0;
-  vlk_pc.sel_id = 1000;
-  vlk_pc.brd_w  = brd_w;
-
-  vlk_board_load = 1;
 }
 
 void * vlk_headless(int w, int h) {

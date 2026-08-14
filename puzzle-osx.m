@@ -2,6 +2,7 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <MetalKit/MetalKit.h>
 
+#include "gme.h"
 #include "vlk.h"
 
 @interface POCViewDelegate : NSObject<MTKViewDelegate>
@@ -9,6 +10,7 @@
 @end
 @implementation POCViewDelegate
 - (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {
+  gme_resize(size.width, size.height);
 }
 - (void)drawInMTKView:(MTKView *)view {
   if (!self.ready) {
@@ -30,12 +32,12 @@
   if (chrs.length != 1) return;
 
   unichar c = [chrs characterAtIndex:0];
-  if (c == ' ') vlk_reset();
+  if (c == ' ') gme_reset();
 }
 - (void) mouseDown:(NSEvent *)event {
   CGPoint liw = [event locationInWindow];
   CGPoint p = [self convertPoint:liw fromView:nil];
-  vlk_mouse_down(p.x, self.frame.size.height - p.y);
+  gme_mouse_down(p.x, self.frame.size.height - p.y);
 }
 // - (void) mouseUp:(NSEvent *)event {
 //   CGPoint liw = [event locationInWindow];
@@ -45,7 +47,7 @@
 - (void) mouseMoved:(NSEvent *)event {
   CGPoint liw = [event locationInWindow];
   CGPoint p = [self convertPoint:liw fromView:nil];
-  vlk_mouse_move(p.x, self.frame.size.height - p.y);
+  gme_mouse_move(p.x, self.frame.size.height - p.y);
 }
 // - (void) mouseDragged:(NSEvent *)event {
 //   CGPoint liw = [event locationInWindow];
