@@ -1,3 +1,4 @@
+#include "gme.h"
 #include "vlk.h"
 
 #include <knownfolders.h>
@@ -37,10 +38,10 @@ static LRESULT window_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) 
       return 0;
 
     case WM_MOUSEMOVE:
-      vlk_mouse_move(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
+      gme_mouse_move(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
       return 0;
     case WM_LBUTTONDOWN:
-      vlk_mouse_down(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
+      gme_mouse_down(GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param));
       return 0;
 
     case WM_ERASEBKGND:
@@ -90,6 +91,7 @@ int WinMain(HINSTANCE h_instance, HINSTANCE h_prev, LPSTR cmd_line, int cmd_show
 
   vlk_hwnd = hwnd;
   vlk_init(1);
+  gme_resize(800, 600);
 
   MSG msg;
   while (GetMessage(&msg, 0, 0, 0)) {

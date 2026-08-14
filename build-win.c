@@ -61,16 +61,12 @@ int main(int argc, char ** argv) {
   HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
   HDR("volk",      "VOLK_IMPLEMENTATION");
 
-  HDR("sfx", "SFX_IMPL");
-  HDR("snd", "SND_IMPL");
-  HDR("vlk", "VLK_IMPL");
-
   if (icon()) return 1;
   if (shaders()) return 1;
   RUN("llvm-rc", "/FO", "main.res", "main.rc");
 
   CC("puzzle-win");
-  if (link_exe()) return 1;
+  if (compile_and_link_exe()) return 1;
 
   CC("shots");
   if (link_shots_exe()) return 1;
