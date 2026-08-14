@@ -118,29 +118,6 @@ static int pch() {
   return run(args);
 }
 
-static int cc(char * src, char * o) {
-  char * args[] = {
-    "clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
-    "-include-pch", "pch.pch", "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
-static int cm(char * src, char * o) {
-  char * args[] = {
-    "clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
-    "-fmodules", "-o", o, "-c", src, 0 };
-  return run(args);
-}
-
-static int hdr(char * src, char * o, char * d) {
-  char * args[] = {
-    "clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
-    "-include-pch", "pch.pch",
-    "-x", "c", "-g", "-D", d, "-o", o, "-c", src, 0
-  };
-  return run(args);
-}
-
 static int link_exe() {
   char * args[] = {
     "clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
@@ -173,14 +150,11 @@ int main(int argc, char ** argv) {
 
   if (pch()) return 1;
 
-  if (hdr("stb_image.h", "stb_image.o", "STB_IMAGE_IMPLEMENTATION")) return 1;
+  HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
+  HDR("vlk",       "VLK_IMPL");
 
-  if (hdr("sfx.h", "sfx.o", "SFX_IMPL")) return 1;
-  if (hdr("snd.h", "snd.o", "SND_IMPL")) return 1;
-  if (hdr("vlk.h", "vlk.o", "VLK_IMPL")) return 1;
-
-  if (cm("puzzle-ios.m", "puzzle-ios.o")) return 1;
-  if (link_exe()) return 1;
+  CM("puzzle-ios");
+  if (compile_and_link_exe()) return 1;
 
   if (shaders()) return 1;
 

@@ -2,6 +2,7 @@
 #import <MetalKit/MetalKit.h>
 #import <UIKit/UIKit.h>
 
+#include "gme.h"
 #include "vlk.h"
 
 CAMetalLayer * g_layer;
@@ -11,6 +12,7 @@ CAMetalLayer * g_layer;
 @end
 @implementation POCViewDelegate
 - (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {
+  gme_resize(size.width, size.height);
 }
 - (void)drawInMTKView:(MTKView *)view {
   if (!self.ready) {
@@ -31,13 +33,13 @@ CAMetalLayer * g_layer;
 }
 
 - (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
-  vlk_reset();
+  gme_reset();
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *) touches withEvent:(UIEvent *) event {
   CGPoint p = [[touches anyObject] locationInView:[self view]];
-  vlk_mouse_move(p.x, p.y);
-  vlk_mouse_down(p.x, p.y);
+  gme_mouse_move(p.x, p.y);
+  gme_mouse_down(p.x, p.y);
 }
 @end
 
