@@ -21,8 +21,7 @@ static int link_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
     "-o", "puzzle.exe", "main.res",
-    "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "puzzle-win.o",
+    OBJS, "vlk.o", "stb_image.o", "volk.o", "puzzle-win.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
     0 };
   return run(args);
@@ -32,8 +31,7 @@ static int link_shots_exe() {
   char * args[] = {
     "clang", "-Wall", OPT,
     "-o", "shots.exe", 
-    "sfx.o", "snd.o", "vlk.o",
-    "stb_image.o", "volk.o", "shots.o",
+    OBJS, "vlk.o", "stb_image.o", "volk.o", "shots.o",
     "-ladvapi32", "-lole32", "-lshell32", "-luser32",
     0 };
   return run(args);
