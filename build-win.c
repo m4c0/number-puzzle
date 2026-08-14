@@ -60,6 +60,7 @@ int main(int argc, char ** argv) {
 
   HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
   HDR("volk",      "VOLK_IMPLEMENTATION");
+  HDR("vlk",       "VLK_IMPL");
 
   if (icon()) return 1;
   if (shaders()) return 1;
