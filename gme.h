@@ -9,14 +9,15 @@ typedef struct gme_upc_s {
   unsigned brd_w;
 } gme_upc_t;
 
-void gme_init(void);
+void gme_init(int w, int h);
 void gme_deinit(void);
 void gme_frame(void);
 
 void gme_resize(int w, int h);
 
+void gme_load(void *);
+
 const gme_upc_t * gme_pc(void);
-const void * gme_data(void);
 
 void gme_mouse_move(int x, int y);
 void gme_mouse_down(int x, int y);
@@ -37,11 +38,12 @@ static gme_upc_t gme_upc;
 static unsigned gme_width;
 static unsigned gme_height;
 
-void gme_init(void) {
+void gme_init(int w, int h) {
   sfx_init();
   snd_init(sfx_filler);
 
   gme_upc.won = 1;
+  gme_resize(w, h);
   gme_reset();
 }
 
@@ -64,8 +66,9 @@ void gme_resize(int w, int h) {
 const gme_upc_t * gme_pc(void) {
   return &gme_upc;
 }
-const void * gme_data(void) {
-  return brd;
+
+void gme_load(void * tgt) {
+  memcpy(tgt, brd, GME_BUF_SIZE);
 }
 
 static float gme_mouse(float p, float a) {
