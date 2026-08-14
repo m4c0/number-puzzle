@@ -1,39 +1,13 @@
-#import <CoreFoundation/CoreFoundation.h>
-#import <MetalKit/MetalKit.h>
+#include "pch.h"
+#include "mtl.h"
+
 #import <UIKit/UIKit.h>
-
-#include "gme.h"
-#include "vlk.h"
-
-CAMetalLayer * g_layer;
-
-@interface POCViewDelegate : NSObject<MTKViewDelegate>
-@property (nonatomic) BOOL ready;
-@end
-@implementation POCViewDelegate
-- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {
-  gme_resize(size.width, size.height);
-}
-- (void)drawInMTKView:(MTKView *)view {
-  if (!self.ready) {
-    g_layer = (CAMetalLayer *)view.layer;
-
-    vlk_init(1);
-    self.ready = YES;
-  }
-  vlk_frame();
-}
-@end
 
 @interface POCViewController : UIViewController
 @end
 @implementation POCViewController
 - (BOOL)canBecomeFirstResponder {
   return YES;
-}
-
-- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
-  gme_reset();
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *) touches withEvent:(UIEvent *) event {
@@ -49,14 +23,10 @@ CAMetalLayer * g_layer;
 @implementation POCWindowSceneDelegate
 - (void) scene:(UIScene *) scene willConnectToSession:(UISceneSession *) session options:(UISceneConnectionOptions *) connectionOptions
 {
-  UIWindowScene * windowScene = (UIWindowScene *)scene;
-
-  MTKView * view = [MTKView new];
-  view.delegate = [POCViewDelegate new];
-
   POCViewController * vc = [POCViewController new];
-  vc.view = view;
+  vc.view = [POCViewDelegate new];
 
+  UIWindowScene * windowScene = (UIWindowScene *)scene;
   self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
   self.window.rootViewController = vc;
   [self.window makeKeyAndVisible];
@@ -79,29 +49,10 @@ configurationForConnectingSceneSession:(UISceneSession *) connectingSceneSession
   return res;
 }
 
-- (void)applicationWillTerminate:(UIApplication *)app 
-{
-  // TODO: is this still the right place in this UIScene world?
-  vlk_deinit();
+- (void)applicationWillTerminate:(UIApplication *)app {
+  gme_deinit();
 }
 @end
-
-CAMetalLayer * vlk_metal_layer() { return g_layer; }
-
-__strong static NSData * last_resource;
-unsigned vlk_open(const char * name, const char * ext, const void ** ptr) {
-  NSString * n = [NSString stringWithFormat:@"%s", name];
-  NSString * e = [NSString stringWithFormat:@"%s", ext];
-  NSString * path = [[NSBundle mainBundle] pathForResource:n ofType:e];
-  last_resource = [NSData dataWithContentsOfFile:path];
-  *ptr = [last_resource bytes];
-  return [last_resource length];
-}
-
-void vlk_log(int r, const char * msg) {
-  NSLog(@"Vulkan call failed (code=%d): %s\n", r, msg);
-  exit(1);
-}
 
 int main(int argc, char ** argv) {
   @autoreleasepool {

@@ -6,7 +6,11 @@
 #define RES_PATH(X) "export.xcarchive/Products/Applications/"X".app"
 #include "build.h"
 
+#include <sys/stat.h>
+#include <string.h>
 #include <time.h>
+
+#define CROSS(X) RUN("spirv-cross", "shader."X".spv", "--msl", "--output", "export.xcarchive/Products/Applications/"APP".app/shader."X".metal", "--flip-vert-y", "--msl-ios")
 
 static time_t bundle_version;
 static int uploading;
@@ -47,18 +51,15 @@ static int symbols() {
 }
 
 static int export() {
-  char * args[] = {
-    "xcodebuild", "-exportArchive",
+  RUN("xcodebuild", "-exportArchive",
     "-archivePath", "export.xcarchive",
     "-exportPath", "export",
-    "-exportOptionsPlist", "export.plist",
-    0 };
-  return run(args);
+    "-exportOptionsPlist", "export.plist");
+  return 0;
 }
 
 static int actool() {
-  char * args[] = {
-    "actool",
+  RUN("actool",
     "--notices", "--warnings", "--errors",
     "--output-format", "human-readable-text",
     "--app-icon", "AppIcon",
@@ -74,10 +75,8 @@ static int actool() {
     "--minimum-deployment-target", "26",
     "--output-partial-info-plist", "icon-partial.plist",
     "--compile", RES_PATH(APP),
-    "Assets.xcassets",
-    0
-  };
-  return run(args);
+    "Assets.xcassets");
+  return 0;
 }
 
 static int install() {
@@ -87,10 +86,8 @@ static int install() {
     return 0;
   }
 
-  char * args[] = {
-    "xcrun", "devicectl", "device", "install", "app", "--device", device, "export/puzzle.ipa", 0
-  };
-  return run(args);
+  RUN("xcrun", "devicectl", "device", "install", "app", "--device", device, "export/"APP".ipa");
+  return 0;
 }
 
 static int validate(char * verb) {
@@ -99,43 +96,28 @@ static int validate(char * verb) {
   char * api_issuer = getenv("IOS_API_ISSUER");
   assert(api_issuer && "Missing IOS_API_ISSUER environment variable");
 
-  char * args[] = {
-    "xcrun", "altool", verb, "-t", "iphoneos",
-    "-f", "export/puzzle.ipa",
+  RUN("xcrun", "altool", verb, "-t", "iphoneos",
+    "-f", "export/"APP".ipa",
     "--apiKey", strdup(api_key),
-    "--apiIssuer", strdup(api_issuer),
-    0 };
-  return run(args);
+    "--apiIssuer", strdup(api_issuer));
+  return 0;
 }
 
 static int pch() {
-  char * args[] = {
-    "clang", "-Wall", "-O3", "-x", "c-header",
-    "-target", TARGET, "-isysroot", SDK_PATH,
-    "-IVulkan-Headers/include",
-    "-D", "VK_USE_PLATFORM_METAL_EXT",
-    "-o", "pch.pch", "pch.h", 0 };
-  return run(args);
+  RUN("clang", "-Wall", "-x", "c-header", "-o", "pch.pch", "pch.h", CFLAGS);
+  return 0;
 }
 
 static int link_exe() {
-  char * args[] = {
-    "clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
+  RUN("clang", "-Wall", "-O3", "-target", TARGET, "-isysroot", SDK_PATH,
     "-framework", "AudioToolbox",
-    "-framework", "CoreFoundation",
-    "-framework", "CoreGraphics",
     "-framework", "Foundation",
-    "-framework", "IOSurface",
     "-framework", "Metal",
     "-framework", "MetalKit",
-    "-framework", "QuartzCore",
     "-framework", "UIKit",
     "-o", RES_PATH(APP)"/"APP, 
-    OBJS, "vlk.o", "stb_image.o", "puzzle-ios.o",
-    "MoltenVK.xcframework/ios-arm64/libMoltenVK.a",
-    "-lc++",
-    0 };
-  return run(args);
+    OBJS, "app-ios.o");
+  return 0;
 }
 
 int main(int argc, char ** argv) {
@@ -149,17 +131,15 @@ int main(int argc, char ** argv) {
 
   if (pch()) return 1;
 
-  HDR("stb_image", "STB_IMAGE_IMPLEMENTATION");
-  HDR("vlk",       "VLK_IMPL");
-
-  CM("puzzle-ios");
+  CM("app-ios");
   if (compile_and_link_exe()) return 1;
-
   if (shaders()) return 1;
+  CROSS("vert");
+  CROSS("frag");
 
   if (apply("export.plist.in",    "export.plist")) return 1;
   if (apply("xcarchive.plist.in", "export.xcarchive/Info.plist")) return 1;
-  if (apply("app.plist.in",       "export.xcarchive/Products/Applications/puzzle.app/Info.plist")) return 1;
+  if (apply("app.plist.in",       "export.xcarchive/Products/Applications/"APP".app/Info.plist")) return 1;
 
   for (int i = 1; i <= 31; i++) {
     char buf[128];
