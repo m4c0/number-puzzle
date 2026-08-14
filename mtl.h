@@ -31,7 +31,7 @@ void gme_load_atlas(const char * name) {
   assert(h == 1024);
 
   MTLRegion r = { {0,0,0}, {1024,1024,1} };
-  [texture replaceRegion:r mipmapLevel:0 withBytes:bytes bytesPerRow:1024*4];
+  [texture replaceRegion:r mipmapLevel:0 withBytes:img bytesPerRow:1024*4];
 
   stbi_image_free(img);
 }
