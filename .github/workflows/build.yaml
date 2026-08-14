@@ -37,14 +37,21 @@ jobs:
     runs-on: windows-latest
     steps:
       - run: dir 'c:\Program Files (x86)\Windows Kits\10\bin'
-      - run: vcpkg install spirv-cross
       - uses: actions/checkout@v6
         with:
           submodules: true
+      - uses: actions/cache@v6
+        id: cache
+        with:
+          path: spirv-cross.exe
+          key: spirv-cross-exe
+      - run: vcpkg install spirv-cross
+        if: steps.cache.outputs.cache-hit != 'true'
+      - run: copy "C:\vcpkg\installed\x64-windows\tools\spirv-cross\spirv-cross.exe" .
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: curl -L -o glslang.zip https://github.com/KhronosGroup/glslang/releases/download/main-tot/glslang-main-windows-x86_64-release.zip
       - run: unzip glslang.zip bin/glslang.exe
       - run: mv bin/glslang.exe .
-      - run: copy "C:\vcpkg\installed\x64-windows\tools\spirv-cross\spirv-cross.exe" .
       - run: clang -o build.exe build-win.c
       - run: ./build.exe
         env:
@@ -54,9 +61,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: windows-exe
-          path: sokoban.exe
+          path: puzzle.exe
       - uses: actions/upload-artifact@v7
         with:
           name: windows-msix
-          path: sokoban.msix
+          path: puzzle.msix
 
