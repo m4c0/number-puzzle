@@ -11,6 +11,7 @@ shot*.png
 *.ico
 *.o
 *.pch
+*.pdb
 *.plist
 *.res
 *.spv
