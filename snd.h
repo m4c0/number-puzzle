@@ -72,6 +72,8 @@ void snd_deinit() {
 #elif _WIN32
 #include <xaudio2.h>
 
+#pragma comment(lib, "ole32")
+
 static float snd_buffer[44100];
 
 static snd_filler_t snd_fn; 

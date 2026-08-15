@@ -6,6 +6,8 @@ shot*.png
 *.app
 *.dylib
 *.exe
+*.hlsl
+*.ico
 *.o
 *.pch
 *.plist
