@@ -32,5 +32,5 @@ bg-029 jpg "imgs\\bg-029.jpg"
 bg-030 jpg "imgs\\bg-030.jpg"
 bg-031 jpg "imgs\\bg-031.jpg"
 
-shader.frag spv "shader.frag.spv"
-shader.vert spv "shader.vert.spv"
+shader.frag hlsl "shader.frag.hlsl"
+shader.vert hlsl "shader.vert.hlsl"
