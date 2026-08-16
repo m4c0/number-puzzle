@@ -1,4 +1,5 @@
 #include "gme.h"
+#include "stb_image.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <initguid.h> // Should come first
@@ -502,6 +503,17 @@ int d3d_frame(void) {
 }
 
 void gme_load_atlas(const char * name) {
+  HRSRC r = FindResource(NULL, name, "jpg");
+  HGLOBAL g = LoadResource(NULL, r);
+  void * ptr = LockResource(g);
+  unsigned sz = SizeofResource(NULL, r);
+
+  int w, h, c;
+  stbi_uc * img = stbi_load_from_memory(ptr, sz, &w, &h, &c, 4);
+  assert(w == 1024);
+  assert(h == 1024);
+
+  memcpy(d3d_txt_data, img, 1024 * 1024 * 4);
 }
 
 static LRESULT window_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) {
