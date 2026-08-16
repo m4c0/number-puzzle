@@ -39,6 +39,8 @@ static unsigned gme_width;
 static unsigned gme_height;
 
 void gme_init(int w, int h) {
+  srand(time(NULL));
+
   sfx_init();
   snd_init(sfx_filler);
 
