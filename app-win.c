@@ -200,6 +200,9 @@ static int d3d_init_root_signature() {
     .pParameters        = (D3D12_ROOT_PARAMETER[]) {{
       // TODO: test if we can merge with the texture's SRV desc range?
       .ParameterType    = D3D12_ROOT_PARAMETER_TYPE_SRV,
+      .Descriptor       = {
+        .ShaderRegister = 1,
+      },
     }, {
       .ParameterType    = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
       .Constants        = (D3D12_ROOT_CONSTANTS) {
