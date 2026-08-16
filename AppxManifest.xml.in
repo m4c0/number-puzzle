@@ -6,7 +6,7 @@
             Version="2.0.0.0" 
             Publisher="&WIN_IDENTITY_PUBLISHER;" />
   <Properties>
-    <DisplayName>Casually Casual Puzzle Game</DisplayName>
+    <DisplayName>Casually Casual Sliding Puzzle</DisplayName>
     <PublisherDisplayName>m4c0</PublisherDisplayName>
     <Logo>Icon-1024.png</Logo>
   </Properties>
@@ -16,7 +16,8 @@
   <Applications>
     <Application Id="puzzle" Executable="puzzle.exe" EntryPoint="Windows.PartialTrustApplication">
       <uap:VisualElements
-        DisplayName="Puzzle" Description="Puzzle"
+        DisplayName="Casually Casual Sliding Puzzle"
+        Description="Number sliding puzzle game"
         Square150x150Logo="Icon-1024.png"
         Square44x44Logo="Icon-1024.png"  
         BackgroundColor="black">
