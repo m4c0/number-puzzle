@@ -470,7 +470,7 @@ int d3d_frame(void) {
 
   COM(d3d_cmd_list, SetGraphicsRootSignature, d3d_root_sign);
   COM(d3d_cmd_list, SetGraphicsRootShaderResourceView, 0, COM(d3d_buffer, GetGPUVirtualAddress));
-  COM(d3d_cmd_list, SetGraphicsRoot32BitConstants, 1, sizeof(gme_upc_t) / 4, &gme_pc, 0);
+  COM(d3d_cmd_list, SetGraphicsRoot32BitConstants, 1, sizeof(gme_upc_t) / 4, gme_pc(), 0);
   COM(d3d_cmd_list, SetGraphicsRootDescriptorTable, 2, d3d_get_gpu_desc(d3d_txt_heap));
   COM(d3d_cmd_list, SetGraphicsRootDescriptorTable, 3, d3d_get_gpu_desc(d3d_smp_heap));
 
