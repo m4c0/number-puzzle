@@ -24,6 +24,7 @@
 #define COM(obj, method, ...) (obj)->lpVtbl->method(obj, __VA_ARGS__)
 #define COM_OK(obj, method, ...) SUCCEEDED(COM(obj, method, __VA_ARGS__))
 #define COM_CHK(obj, method, ...) if (FAILED(COM(obj, method, __VA_ARGS__))) return 1
+#define D3D_CHK(obj, method, ...) if (FAILED(COM(obj, method, __VA_ARGS__))) return d3d_output_errors()
 
 static IDXGIFactory4             * d3d_factory;
 static IDXGIAdapter1             * d3d_adapter;
@@ -38,6 +39,12 @@ static ID3D12PipelineState       * d3d_pso;
 
 static ID3D12Resource * d3d_rt[BUFFER_COUNT];
 static ID3D12Resource * d3d_buffer;
+
+static ID3D12Resource       * d3d_txt;
+static ID3D12Resource       * d3d_txt_upload;
+static ID3D12DescriptorHeap * d3d_txt_heap;
+static ID3D12DescriptorHeap * d3d_smp_heap;
+static void *                 d3d_txt_data;
 
 static ID3D12Fence * d3d_fence;
 static unsigned      d3d_frame_idx;
@@ -55,6 +62,13 @@ static D3D12_CPU_DESCRIPTOR_HANDLE d3d_get_cpu_desc(ID3D12DescriptorHeap * heap)
   return h;
 }
 
+typedef void (STDMETHODCALLTYPE * d3d_get_gpu_desc_t)(ID3D12DescriptorHeap *, D3D12_GPU_DESCRIPTOR_HANDLE *);
+static D3D12_GPU_DESCRIPTOR_HANDLE d3d_get_gpu_desc(ID3D12DescriptorHeap * heap) {
+  D3D12_GPU_DESCRIPTOR_HANDLE h;
+  ((d3d_get_gpu_desc_t)heap->lpVtbl->GetGPUDescriptorHandleForHeapStart)(heap, &h);
+  return h;
+}
+
 static int d3d_debug() {
 #ifdef DEBUG_INTERFACE
   ID3D12Debug * debug;
@@ -64,6 +78,26 @@ static int d3d_debug() {
   }
 #endif
   return 0;
+}
+
+static int d3d_output_errors() {
+#ifdef DEBUG_INTERFACE
+  ID3D12InfoQueue * infoq;
+  COM_CHK(d3d_device, QueryInterface, &IID_ID3D12InfoQueue, (void **)&infoq);
+  int n = COM(infoq, GetNumStoredMessages);
+  for (int i = 0; i < n; i++) {
+    size_t sz = 0;
+    COM(infoq, GetMessage, i, NULL, &sz);
+
+    D3D12_MESSAGE * msg = malloc(sz); // Trusting MS sends the right size
+    COM_CHK(infoq, GetMessage, i, msg, &sz);
+    // TODO: MessageBox
+    OutputDebugString(msg->pDescription);
+    OutputDebugString("\n");
+    free(msg);
+  }
+#endif
+  return 1;
 }
 
 static inline int d3d_enum_adapter_by_gpu(IDXGIFactory6 * f6, unsigned i) {
@@ -162,13 +196,32 @@ static int d3d_init_root_signature() {
   ID3DBlob * blob;
   ID3DBlob * err;
   D3D12_ROOT_SIGNATURE_DESC desc = {
-    .NumParameters      = 2,
+    .NumParameters      = 4,
     .pParameters        = (D3D12_ROOT_PARAMETER[]) {{
+      // TODO: test if we can merge with the texture's SRV desc range?
       .ParameterType    = D3D12_ROOT_PARAMETER_TYPE_SRV,
     }, {
       .ParameterType    = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
       .Constants        = (D3D12_ROOT_CONSTANTS) {
         .Num32BitValues = sizeof(gme_upc_t) / 4,
+      },
+    }, {
+      .ParameterType         = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+      .DescriptorTable       = {
+        .NumDescriptorRanges = 1,
+        .pDescriptorRanges   = (D3D12_DESCRIPTOR_RANGE[]) {{
+          .RangeType         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+          .NumDescriptors    = 1,
+        }},
+      },
+    }, {
+      .ParameterType         = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+      .DescriptorTable       = {
+        .NumDescriptorRanges = 1,
+        .pDescriptorRanges   = (D3D12_DESCRIPTOR_RANGE[]) {{
+          .RangeType         = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+          .NumDescriptors    = 1,
+        }},
       },
     }},
   };
@@ -254,6 +307,78 @@ static int d3d_init_buffer(void) {
   return 0;
 }
 
+static int d3d_init_txt_heap(void) {
+  D3D12_DESCRIPTOR_HEAP_DESC desc = {
+    .NumDescriptors = 1,
+    .Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+  };
+  COM_CHK(d3d_device, CreateDescriptorHeap, &desc, &IID_ID3D12DescriptorHeap, (void **)&d3d_txt_heap);
+  return 0;
+}
+static int d3d_init_txt(void) {
+  D3D12_HEAP_PROPERTIES heap = {
+    .Type = D3D12_HEAP_TYPE_DEFAULT,
+  };
+  D3D12_RESOURCE_DESC res = {
+    .Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+    .Format           = DXGI_FORMAT_R8G8B8A8_UNORM,
+    .Width            = 1024,
+    .Height           = 1024,
+    .DepthOrArraySize = 1,
+    .MipLevels        = 1,
+    .SampleDesc       = (DXGI_SAMPLE_DESC) {
+      .Count          = 1,
+    },
+  };
+  D3D_CHK(d3d_device, CreateCommittedResource,
+      &heap, D3D12_HEAP_FLAG_NONE, &res, D3D12_RESOURCE_STATE_COPY_DEST, NULL, 
+      &IID_ID3D12Resource, (void **)&d3d_txt);
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
+    .Format                  = DXGI_FORMAT_R8G8B8A8_UNORM,
+    .ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D,
+    .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+    .Texture2D               = {
+      .MipLevels             = 1,
+    },
+  };
+  COM(d3d_device, CreateShaderResourceView, d3d_txt, &srv_desc, d3d_get_cpu_desc(d3d_txt_heap));
+
+  uint64_t sz;
+  COM(d3d_device, GetCopyableFootprints, &res, 0, 1, 0, NULL, NULL, NULL, &sz);
+
+  heap = (D3D12_HEAP_PROPERTIES) {
+    .Type = D3D12_HEAP_TYPE_UPLOAD,
+  };
+  res = (D3D12_RESOURCE_DESC) {
+    .Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER,
+    .Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+    .Width            = sz,
+    .Height           = 1,
+    .DepthOrArraySize = 1,
+    .MipLevels        = 1,
+    .SampleDesc       = (DXGI_SAMPLE_DESC) {
+      .Count          = 1,
+    },
+  };
+  D3D_CHK(d3d_device, CreateCommittedResource,
+      &heap, D3D12_HEAP_FLAG_NONE, &res, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, 
+      &IID_ID3D12Resource, (void **)&d3d_txt_upload);
+
+  COM_CHK(d3d_txt_upload, Map, 0, NULL, &d3d_txt_data);
+
+  return 0;
+}
+static int d3d_init_smp_heap(void) {
+  D3D12_DESCRIPTOR_HEAP_DESC desc = {
+    .Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+    .NumDescriptors = 1,
+    .Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+  };
+  COM_CHK(d3d_device, CreateDescriptorHeap, &desc, &IID_ID3D12DescriptorHeap, (void **)&d3d_smp_heap);
+  return 0;
+}
+
 int d3d_init(HWND hwnd) {
   if (FAILED(CreateDXGIFactory2(d3d_debug(), &IID_IDXGIFactory4, (void **)&d3d_factory))) return 1;
 
@@ -273,6 +398,10 @@ int d3d_init(HWND hwnd) {
   if (d3d_init_cmdlist())        return 1;
 
   if (d3d_init_buffer()) return 1;
+
+  if (d3d_init_smp_heap()) return 1;
+  if (d3d_init_txt_heap()) return 1;
+  if (d3d_init_txt())      return 1;
 
   COM_CHK(d3d_device, CreateFence, 0, D3D12_FENCE_FLAG_NONE, &IID_ID3D12Fence, (void **)&d3d_fence);
   d3d_frame_idx   = COM(d3d_swc, GetCurrentBackBufferIndex);
@@ -333,9 +462,13 @@ int d3d_frame(void) {
   COM_CHK(d3d_cmd_alloc, Reset);
   COM_CHK(d3d_cmd_list, Reset, d3d_cmd_alloc, d3d_pso);
 
+  COM(d3d_cmd_list, SetDescriptorHeaps, 2, (ID3D12DescriptorHeap *[]) { d3d_txt_heap, d3d_smp_heap });
+
   COM(d3d_cmd_list, SetGraphicsRootSignature, d3d_root_sign);
   COM(d3d_cmd_list, SetGraphicsRootShaderResourceView, 0, COM(d3d_buffer, GetGPUVirtualAddress));
   COM(d3d_cmd_list, SetGraphicsRoot32BitConstants, 1, sizeof(gme_upc_t) / 4, &gme_pc, 0);
+  COM(d3d_cmd_list, SetGraphicsRootDescriptorTable, 2, d3d_get_gpu_desc(d3d_txt_heap));
+  COM(d3d_cmd_list, SetGraphicsRootDescriptorTable, 3, d3d_get_gpu_desc(d3d_smp_heap));
 
   D3D12_VIEWPORT vp = { 0, 0, SCR_W, SCR_H };
   COM(d3d_cmd_list, RSSetViewports, 1, &vp);
