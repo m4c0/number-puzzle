@@ -20,9 +20,8 @@ static int run(int w, int h) {
   rpd.colorAttachments[0].texture = txt;
   rpd.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
 
-  gme_init(w, h);
-
   POCStuff * stuff = [POCStuff newWithDevice:device];
+  gme_init(w, h);
   [stuff draw:NSMakeSize(w, h) rpd:rpd into:nil];
 
   void * raw = malloc(w * h * 4);
