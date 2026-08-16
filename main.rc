@@ -34,3 +34,8 @@ bg-031 jpg "imgs\\bg-031.jpg"
 
 shader.frag hlsl "shader.frag.hlsl"
 shader.vert hlsl "shader.vert.hlsl"
+
+STRINGTABLE
+BEGIN
+  101 "Casually Casual Sliding Puzzle"
+END
