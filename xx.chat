@@ -1,0 +1,7 @@
+tool vim_list_buffers
+tool vim_getbufline
+
+role user
+cont
+  I'm trying to understand why shots-osx 
+.

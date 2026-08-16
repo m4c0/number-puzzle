@@ -1,0 +1,730 @@
+role user
+cont
+  I applied the following diff to my game and now it only renders a black screen.
+
+  diff --git a/gme.h b/gme.h
+  index c528926..9082010 100644
+  --- a/gme.h
+  +++ b/gme.h
+  @@ -1,7 +1,144 @@
+   #ifndef GME_H
+   #define GME_H
+   
+  +typedef struct gme_upc_s {
+  +  float    aspect_x, aspect_y;
+  +  float    time;
+  +  float    won;
+  +  unsigned sel_id;
+  +  unsigned brd_w;
+  +} gme_upc_t;
+  +
+  +void gme_init(void);
+  +void gme_deinit(void);
+  +void gme_frame(void);
+  +
+  +void gme_resize(int w, int h);
+  +
+  +const gme_upc_t * gme_pc(void);
+  +const void * gme_data(void);
+  +
+  +void gme_mouse_move(int x, int y);
+  +void gme_mouse_down(int x, int y);
+  +
+  +void gme_reset(void);
+  +
+  +extern void gme_load_atlas(const char * file);
+  +
+  +#define GME_BUF_SIZE 400
+  +
+   #ifdef GME_IMPL
+  +#include "brd.h"
+  +#include "sfx.h"
+  +#include "snd.h"
+  +#include "tim.h"
+  +
+  +static gme_upc_t gme_upc;
+  +static unsigned gme_width;
+  +static unsigned gme_height;
+  +
+  +void gme_init(void) {
+  +  sfx_init();
+  +  snd_init(sfx_filler);
+  +
+  +  gme_upc.won = 1;
+  +  gme_reset();
+  +}
+  +
+  +void gme_deinit(void) {
+  +  snd_deinit();
+  +}
+  +
+  +void gme_frame(void) {
+  +  float a = (float)gme_width / (float)gme_height;
+  +  gme_upc.aspect_x = a > 1 ? a : 1;
+  +  gme_upc.aspect_y = a > 1 ? 1 : (1.0 / a);
+  +  gme_upc.time = tim_now();
+  +}
+  +
+  +void gme_resize(int w, int h) {
+  +  gme_width = w;
+  +  gme_height = h;
+  +}
+  +
+  +const gme_upc_t * gme_pc(void) {
+  +  return &gme_upc;
+  +}
+  +const void * gme_data(void) {
+  +  return brd;
+  +}
+  +
+  +static float gme_mouse(float p, float a) {
+  +#ifdef __APPLE__
+  +  p *= 2;
+  +#endif
+  +
+  +  p = p * 2 - 1;
+  +  p *= a;
+  +
+  +  p /= 0.9;
+  +  p = p * 0.5 + 0.5;
+  +  p *= brd_w;
+  +  return p;
+  +}
+  +void gme_mouse_move(int x, int y) {
+  +  if (gme_upc.won) return;
+  +
+  +  float px = gme_mouse((float)x / (float)gme_width,  gme_upc.aspect_x);
+  +  float py = gme_mouse((float)y / (float)gme_height, gme_upc.aspect_y);
+  +  
+  +  if (px < 0 || px >= brd_w || py < 0 || py >= brd_w) px = py = 10;
+  +  gme_upc.sel_id = (int)px + (int)py * brd_w;
+  +}
+  +
+  +static int gme_board_swap(int a, int dx, int dy) {
+  +  int bx = dx + (a % brd_w);
+  +  int by = dy + (a / brd_w);
+  +  if (bx < 0 || bx >= brd_w || by < 0 || by >= brd_w) return 0;
+  +  int b = by * brd_w + bx;
+  +  
+  +  if (b >= brd_w2) return 0;
+  +  if (brd[b]) return 0;
+  +
+  +  int won = brd_swap(a, b);
+  +  gme_upc.sel_id = 1000;
+  +  gme_upc.won = won ? tim_now() : 0;
+  +  if (gme_upc.won) sfx_win(); else sfx_move();
+  +  return 1;
+  +}
+  +void gme_mouse_down(int x, int y) {
+  +  if (gme_upc.won) {
+  +    float px = gme_mouse((float)x / (float)gme_width,  gme_upc.aspect_x);
+  +    float py = gme_mouse((float)y / (float)gme_height, gme_upc.aspect_y);
+  +    if (px > brd_w || py > brd_w) gme_reset();
+  +    return;
+  +  }
+  +
+  +  int id = gme_upc.sel_id;
+  +  if (id >= brd_w2) return;
+  +
+  +  if (gme_board_swap(id, +1,  0)) return;
+  +  if (gme_board_swap(id, -1,  0)) return;
+  +  if (gme_board_swap(id,  0, +1)) return;
+  +  if (gme_board_swap(id,  0, -1)) return;
+  +}
+  +
+  +#define GME_ATLAS_COUNT 31
+  +void gme_reset(void) {
+  +  if (!gme_upc.won) return;
+  +
+  +  int n = 1 + (rand() % GME_ATLAS_COUNT);
+  +  char name[128];
+  +  snprintf(name, 128, "bg-%003d", n);
+  +  gme_load_atlas(name);
+  +
+  +  brd_init(4);
+  +  sfx_shuffle();
+  +
+  +  gme_upc.won    = 0;
+  +  gme_upc.sel_id = 1000;
+  +  gme_upc.brd_w  = brd_w;
+  +}
+   
+   #endif
+   #endif
+  diff --git a/puzzle-osx.m b/puzzle-osx.m
+  index f263894..709ee3f 100644
+  --- a/puzzle-osx.m
+  +++ b/puzzle-osx.m
+  @@ -2,6 +2,7 @@
+   #import <CoreFoundation/CoreFoundation.h>
+   #import <MetalKit/MetalKit.h>
+   
+  +#include "gme.h"
+   #include "vlk.h"
+   
+   @interface POCViewDelegate : NSObject<MTKViewDelegate>
+  @@ -30,12 +31,12 @@ - (void)keyDown:(NSEvent *)event {
+     if (chrs.length != 1) return;
+   
+     unichar c = [chrs characterAtIndex:0];
+  -  if (c == ' ') vlk_reset();
+  +  if (c == ' ') gme_reset();
+   }
+   - (void) mouseDown:(NSEvent *)event {
+     CGPoint liw = [event locationInWindow];
+     CGPoint p = [self convertPoint:liw fromView:nil];
+  -  vlk_mouse_down(p.x, self.frame.size.height - p.y);
+  +  gme_mouse_down(p.x, self.frame.size.height - p.y);
+   }
+   // - (void) mouseUp:(NSEvent *)event {
+   //   CGPoint liw = [event locationInWindow];
+  @@ -45,7 +46,7 @@ - (void) mouseDown:(NSEvent *)event {
+   - (void) mouseMoved:(NSEvent *)event {
+     CGPoint liw = [event locationInWindow];
+     CGPoint p = [self convertPoint:liw fromView:nil];
+  -  vlk_mouse_move(p.x, self.frame.size.height - p.y);
+  +  gme_mouse_move(p.x, self.frame.size.height - p.y);
+   }
+   // - (void) mouseDragged:(NSEvent *)event {
+   //   CGPoint liw = [event locationInWindow];
+  diff --git a/vlk.h b/vlk.h
+  index 5c3ef13..626b621 100644
+  --- a/vlk.h
+  +++ b/vlk.h
+  @@ -7,10 +7,6 @@ void vlk_deinit();
+   
+   void * vlk_headless(int w, int h);
+   
+  -void vlk_reset();
+  -void vlk_mouse_down(int x, int y);
+  -void vlk_mouse_move(int x, int y);
+  -
+   extern unsigned vlk_open(const char * name, const char * ext, const void ** ptr);
+   
+   #ifdef __APPLE__
+  @@ -20,22 +16,8 @@ extern HWND vlk_hwnd;
+   #endif
+   
+   #ifdef VLK_IMPL
+  -#include "Vulkan-Headers/include/vulkan/vulkan_core.h"
+  -
+  -#include "brd.h"
+  +#include "gme.h"
+   #include "stb_image.h"
+  -#include "sfx.h"
+  -#include "snd.h"
+  -#include "tim.h"
+  -
+  -typedef struct vlk_upc_s {
+  -  float    aspect_x, aspect_y;
+  -  float    time;
+  -  float    won;
+  -  unsigned sel_id;
+  -  unsigned brd_w;
+  -} vlk_upc_t;
+  -static vlk_upc_t vlk_pc;
+   
+   static VkCommandPool      vlk_cpool;
+   static VkDevice           vlk_dev;
+  @@ -59,8 +41,6 @@ static VkSampler             vlk_smp;
+   static VkBuffer       vlk_board_buf;
+   static VkDeviceMemory vlk_board_mem;
+   
+  -static int vlk_board_load = 1;
+  -
+   #define MAX_SWAPCHAIN_IMAGES 8
+   typedef struct vlk_swc {
+     VkFramebuffer   fb  [MAX_SWAPCHAIN_IMAGES];
+  @@ -563,7 +543,7 @@ static void vlk_create_pipeline_layout() {
+       .pushConstantRangeCount = 1,
+       .pPushConstantRanges = (VkPushConstantRange[]) {{
+         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+  -      .size       = sizeof(vlk_upc_t),
+  +      .size       = sizeof(gme_upc_t),
+       }},
+     };
+     _(vkCreatePipelineLayout(vlk_dev, &info, NULL, &vlk_pl));
+  @@ -718,7 +698,7 @@ static VkCommandBuffer vlk_record_buf2img(VkBuffer buf, VkImage img, int w, int
+     return cb;
+   }
+   
+  -static void vlk_load_atlas(const char * name) {
+  +void gme_load_atlas(const char * name) {
+     const void * f;
+     unsigned sz = vlk_open(name, "jpg", &f);
+   
+  @@ -766,7 +746,7 @@ static void vlk_update_descriptor_sets() {
+   }
+   
+   void vlk_create_board() {
+  -  const VkDeviceSize sz = sizeof(brd);
+  +  const VkDeviceSize sz = GME_BUF_SIZE;
+     vlk_board_buf = vlk_create_buffer(sz, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+     vlk_board_mem = vlk_allocate_memory(sz, vlk_find_local_memory());
+     _(vkBindBufferMemory(vlk_dev, vlk_board_buf, vlk_board_mem, 0));
+  @@ -811,17 +791,13 @@ void vlk_init(int surf) {
+     vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8G8B8A8_UNORM);
+     vlk_update_descriptor_sets();
+   
+  -  vlk_pc.won = 1;
+  -  vlk_reset();
+  -
+  -  sfx_init();
+  -  snd_init(sfx_filler);
+  +  gme_init();
+   }
+   
+   void vlk_deinit() {
+     vkDeviceWaitIdle(vlk_dev);
+   
+  -  snd_deinit();
+  +  gme_deinit();
+   
+     vlk_destroy_swc(&vlk_swc);
+     vlk_destroy_swc(&vlk_swc_old);
+  @@ -851,12 +827,9 @@ void vlk_deinit() {
+   }
+   
+   static void vlk_record(VkCommandBuffer cb) {
+  -  float a = (float)vlk_ext.width / (float)vlk_ext.height;
+  -  vlk_pc.aspect_x = a > 1 ? a : 1;
+  -  vlk_pc.aspect_y = a > 1 ? 1 : (1.0 / a);
+  -  vlk_pc.time = tim_now();
+  +  gme_frame();
+   
+  -  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vlk_upc_t), &vlk_pc);
+  +  vkCmdPushConstants(cb, vlk_pl, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(gme_upc_t), gme_pc());
+     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_pl, 0, 1, &vlk_dset, 0, NULL);
+     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vlk_ppl);
+     vkCmdDraw(cb, 3, 1, 0, 0);
+  @@ -869,10 +842,7 @@ static void vlk_record_cmdbuf(int i) {
+     };
+     vkBeginCommandBuffer(cb, &binfo);
+   
+  -  if (vlk_board_load) {
+  -    vkCmdUpdateBuffer(cb, vlk_board_buf, 0, brd_w2 * sizeof(int), brd);
+  -    vlk_board_load = 0;
+  -  }
+  +  vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data());
+   
+     VkClearValue clear = {
+       .color = {{ 0.1, 0.2, 0.3, 1 }},
+  @@ -906,6 +876,8 @@ static void vlk_record_cmdbuf(int i) {
+   void vlk_frame() {
+     if (!vlk_swc.swc) vlk_create_swc();
+   
+  +  //vlk_load_atlas("");
+  +
+     unsigned inf = vlk_cur_inflight;
+   
+     _(vkWaitForFences(vlk_dev, 1, vlk_fence + inf, VK_TRUE, ~0UL));
+  @@ -953,81 +925,6 @@ void vlk_frame() {
+     }
+   }
+   
+  -static float vlk_mouse(float p, float a) {
+  -#ifdef __APPLE__
+  -  p *= 2;
+  -#endif
+  -
+  -  p = p * 2 - 1;
+  -  p *= a;
+  -
+  -  p /= 0.9;
+  -  p = p * 0.5 + 0.5;
+  -  p *= brd_w;
+  -  return p;
+  -}
+  -void vlk_mouse_move(int x, int y) {
+  -  if (vlk_pc.won) return;
+  -
+  -  float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
+  -  float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
+  -  
+  -  if (px < 0 || px >= brd_w || py < 0 || py >= brd_w) px = py = 10;
+  -  vlk_pc.sel_id = (int)px + (int)py * brd_w;
+  -}
+  -static int vlk_board_swap(int a, int dx, int dy) {
+  -  int bx = dx + (a % brd_w);
+  -  int by = dy + (a / brd_w);
+  -  if (bx < 0 || bx >= brd_w || by < 0 || by >= brd_w) return 0;
+  -  int b = by * brd_w + bx;
+  -  
+  -  if (b >= brd_w2) return 0;
+  -  if (brd[b]) return 0;
+  -
+  -  int won = brd_swap(a, b);
+  -  vlk_pc.sel_id = 1000;
+  -  vlk_pc.won = won ? tim_now() : 0;
+  -  vlk_board_load = 1;
+  -  if (vlk_pc.won) sfx_win(); else sfx_move();
+  -  return 1;
+  -}
+  -void vlk_mouse_down(int x, int y) {
+  -  if (vlk_pc.won) {
+  -    float px = vlk_mouse((float)x / (float)vlk_ext.width,  vlk_pc.aspect_x);
+  -    float py = vlk_mouse((float)y / (float)vlk_ext.height, vlk_pc.aspect_y);
+  -    if (px > brd_w || py > brd_w) vlk_reset();
+  -    return;
+  -  }
+  -
+  -  int id = vlk_pc.sel_id;
+  -  if (id >= brd_w2) return;
+  -
+  -  if (vlk_board_swap(id, +1,  0)) return;
+  -  if (vlk_board_swap(id, -1,  0)) return;
+  -  if (vlk_board_swap(id,  0, +1)) return;
+  -  if (vlk_board_swap(id,  0, -1)) return;
+  -}
+  -
+  -#define VLK_ATLAS_COUNT 31
+  -void vlk_reset() {
+  -  if (!vlk_pc.won) return;
+  -
+  -  int n = 1 + (rand() % VLK_ATLAS_COUNT);
+  -  char buf[128];
+  -  snprintf(buf, 128, "bg-%003d", n);
+  -
+  -  vlk_load_atlas(buf);
+  -
+  -  brd_init(4);
+  -  sfx_shuffle();
+  -
+  -  vlk_pc.won    = 0;
+  -  vlk_pc.sel_id = 1000;
+  -  vlk_pc.brd_w  = brd_w;
+  -
+  -  vlk_board_load = 1;
+  -}
+  -
+   void * vlk_headless(int w, int h) {
+     VkCommandBuffer cb;
+     vlk_allocate_command_buffers(vlk_swc_count, &cb);
+.
+
+role assistant
+fini length
+reas
+  We need answer user. Need debug black screen after diff. Need inspect code. We have gme.h implementation and vlk.h changes. Need find bug.
+
+  We need reason. Diff moved game logic from vlk to gme. Black screen. Potential issues:
+
+  - gme_load_atlas declared extern void gme_load_atlas(const char * file); in gme.h. Defined in vlk.h as void gme_load_atlas(const char * name) inside VLK_IMPL. Fine if gme.h included where implemented? But gme_load_atlas is defined after vlk_load_atlas? Actually in diff: static void vlk_load_atlas renamed to void gme_load_atlas. It is in vlk.h with VLK_IMPL. But gme.h implementation includes sfx, snd, tim, brd. It calls gme_load_atlas. Since gme.h defines it static? It extern in gme.h; when GME_IMPL included, implementation of gme.h includes itself? Let's inspect.
+
+  Original gme.h now contains declaration and inline implementation guarded by GME_IMPL. If a source file defines GME_IMPL and includes gme.h, implementation inserted. It calls gme_load_atlas(name). gme_load_atlas defined elsewhere in vlk.h? In app likely puzzle-osx.m includes gme.h then vlk.h? Need know include ordering. gme.h declares extern gme_load_atlas. Implementation of gme.h at top includes brd, sfx, snd, tim, but not vlk.h. Calls gme_load_atlas. Link resolves to function in vlk.h compiled where VLK_IMPL. OK.
+
+  Black screen. Let's inspect push constants. gme_upc_t is same? It has float aspect_x, aspect_y, time, won; unsigned sel_id; unsigned brd_w. Struct size: 4*4 + 4 + 4 = 24, alignment 4. Same as old vlk_upc_t. OK.
+
+  But in gme_frame only sets aspect_x/y, time. Doesn't set won? gme_init sets won? yes. In reset it sets won=0. In mouse_move if won return. OK.
+
+  Potential issue in gme_mouse: p = p * 2 -1; p*=a; p/=0.9; p = p*0.5+0.5; p *= brd_w. If brd_w not initialized? gme_reset sets gme_upc.brd_w = brd_w. But gme_mouse may be called before reset? In gme_init: sfx_init, snd_init, gme_upc.won=1; gme_reset(); gme_reset sets brd_w. OK.
+
+  But note gme_reset checks if (!gme_upc.won) return; In init won=1, calls reset. Reset loads atlas, brd_init, sets won=0. Fine.
+
+  Potential issue rendering board buffer size. In vlk_create_board: const VkDeviceSize sz = GME_BUF_SIZE; It creates buffer and memory of size 400 bytes? GME_BUF_SIZE 400. But original brd size? Need infer brd_w brd_w2. brd_init(4): board 4x4 = 16 ints? brd_w2? Maybe brd_w=4, brd_w2=16? GME_BUF_SIZE 400 seems much larger. They use GME_BUF_SIZE as size in bytes? In vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data()); vkCmdUpdateBuffer size in bytes. brd maybe unsigned char? Need inspect brd.h? Not provided. Original code had vkCmdUpdateBuffer(cb, vlk_board_buf, 0, brd_w2 * sizeof(int), brd); So board data size is brd_w2 * sizeof(int), not GME_BUF_SIZE. Wait diff changed to GME_BUF_SIZE, maybe brd_w2=100? Let's parse: board is 4x4 => brd_w=4, brd_w2=16. GME_BUF_SIZE=400 likely max. But updating 400 bytes from gme_data (pointer to brd) could read beyond actual board array? Actually brd may be array of 100 ints? No 4x4? Maybe brd_w is "board width" in cells; brd_w2 = brd_w*brd_w? ID. brd buffer is int array length 100? Actually board size 4x4? Sliding puzzle with 15 tiles? Could be board dimension in pixels? Let's look at gme_mouse: p *= brd_w; sel_id=(int)px+(int)py*brd_w. So brd_w is number cells width. It selects cell. brd_swap swaps indices in array of brd_w*brd_w ints. So brd_w2 = brd_w*brd_w? They check if (b >= brd_w2) return 0. For 4, brd_w2=16. So board array 16 ints. Why GME_BUF_SIZE 400? Possibly because shader expects storage buffer with at least 400 bytes? Let's examine shader? In vlk, descriptor has storage buffer brd? Need know shader reads brd array with dynamic index. Push constants include brd_w. Shader might use brd data. GME_BUF_SIZE may be used as maximum board buffer bytes? But vkCmdUpdateBuffer copies 400 bytes from brd pointer. If brd is int[16] (64 bytes), reading 400 bytes is out of bounds, but not black screen maybe undefined; could crash. Original used brd_w2*sizeof(int). Why diff changed to GME_BUF_SIZE? Need determine if that's cause black screen? It could cause invalid memory, but likely not black screen; maybe copy 400 bytes from brd overflows, Vulkan validation error, but still.
+
+  Actually original code: vkCmdUpdateBuffer(cb, vlk_board_buf, 0, brd_w2 * sizeof(int), brd); If brd_w2 = 100? Wait if 4x4 board with one empty = 15 tiles? But index b >= brd_w2 return 0, so brd_w2=16. Yet GME_BUF_SIZE=400 is maybe "GME buffer size" in bytes, not cells. But vkCmdUpdateBuffer size is bytes. If brd is a struct? Let's infer from gme_data return const void * brd. brd likely global array of unsigned? The diff says GME_BUF_SIZE = 400. Could be because they wanted to hide "brd.h" and set buffer size to max board data? But update from brd pointer with 400 is dangerous. Unless brd is defined as static int brd[100]? But if board is 4x4, why 100? Could be because brd_w is not 4 but "board world width" 10? Wait in gme_mouse, board pixel positions normalized by brd_w. If brd_w is 4, selecting cells in a 4x4 position grid. Yes.
+
+  Let's inspect original vlk.h before diff? It had vlk_create_board: VkDeviceSize sz = sizeof(brd). So brd is static array or pointer? "sizeof(brd)" maybe entire array. They then vkCmdUpdateBuffer(cb, ..., brd_w2 * sizeof(int), brd). If sizeof(brd) could be 400 if brd is int[100]? But board dimensions 4? Contradiction. Wait maybe brd is not tile board; could be "board" of all possible positions? Let's reason.
+
+  The game might be "15-puzzle" with board width brd_w = 4, total cells brd_w2 = 16. A static board `int brd[]`? Maybe brd is a texture/vertex grid? The shader consumes board buffer to draw images based on IDs. Could be 16 ints. GME_BUF_SIZE 400 maybe bytes for max possible board size? If board always 4x4, 64 enough. But 400 no harm except copy overflow.
+
+  Potential black screen after diff: gme_load_atlas uses `vlk_open(name, "jpg", &f)`; maybe atlas texture is loaded but `vlk_load_atlas` was static, renamed to non-static; declaration uses `const char * file`, definition `const char * name`. OK.
+
+  But in `gme_reset`, `char name[128]; snprintf(name, 128, "bg-%003d", n);` This format `%003d`? `%003d` means minimum width 3, pad with zeros? Yes e.g. bg-001. Original same "bg-%003d". OK.
+
+  `gme_init` calls `gme_reset()` after `gme_upc.won=1`; But note `gme_reset()` uses `rand()` and `gme_load_atlas`. It checks `if (!gme_upc.won) return;` OK.
+
+  Could black screen due to initialization order. In original: vlk_init created atlas image, descriptor sets, then set vlk_pc.won=1, vlk_reset(); sfx_init; snd_init. Wait original in diff:
+  ```
+  vlk_create_img(&vlk_atlas, 1024, 1024, VK_FORMAT_R8G8B8A8_UNORM);
+  vlk_update_descriptor_sets();
+
+  vlk_pc.won = 1;
+  vlk_reset();
+
+  sfx_init();
+  snd_init(sfx_filler);
+  ```
+  After diff:
+  ```
+  vlk_update_descriptor_sets();
+
+  gme_init();
+  ```
+  gme_init calls sfx_init, snd_init, then gme_reset. gme_reset calls gme_load_atlas, which uses vlk_atlas? It loads texture into `vlk_atlas`? Need inspect `vlk_load_atlas` function. It likely creates staging buffer, copies image, transitions. It may depend on `vlk_atlas` created before. OK. But then `vlk_update_descriptor_sets()` was called before atlas image loaded? Original also called update before vlk_reset. If descriptor set contains atlas image view, loading atlas after update may not update descriptor? Wait `vlk_load_atlas` probably copies into `vlk_atlas` image memory and does transitions; descriptor set references `vlk_atlas_view` so no update needed. Original same.
+
+  Potential issue `gme_init` calls `sfx_init` before `gme_reset`; original `sfx_init` after `vlk_reset`. Not likely.
+
+  Potential issue with `gme_load_atlas` declared `extern` in gme.h, but defined in vlk.h as non-static. In puzzle-osx.m, include gme.h then vlk.h. If VLK_IMPL is defined in some C file, gme_load_atlas definition is compiled. In gme.h implementation, when GME_IMPL is defined, `#include "brd.h"` etc. But if gme.h is included by puzzle-osx.m with GME_IMPL? likely not. Maybe they compile gme.h in one translation unit? Need see build. But black screen suggests it runs.
+
+  Potential issue: `gme_pc()` returns pointer to static `gme_upc`. In `vlk_record`, push constants size = sizeof(gme_upc_t), pointer gme_pc. Good.
+
+  But `gme_frame` updates time every frame. It doesn't update `won`? no.
+
+  Black screen could be because `gme_upc.won` initialized? It is static zero. In gme_init, won=1. But if gme_init is never called? VLK init calls it. OK.
+
+  Maybe `gme_data()` returns `brd`, but `brd` variables are now static inside gme.h? Wait gme.h implementation `#include "brd.h"` includes global `brd`? Let's infer brd.h likely defines `extern int brd[];` and `brd_w`, `brd_w2`, functions. OK. gme_data returns `brd` global. In vlk_record_cmdbuf, gme_data used every frame. Original `brd` was accessible in vlk because vlk.h included brd.h. Now gme_data returns. OK.
+
+  Potential issue: `vlk_record_cmdbuf` now calls vkCmdUpdateBuffer every frame, not only when board load flag set. That's OK but could cause sync issues. It copies 400 bytes maybe. If copying 400 bytes from brd of 16 ints = crash. But if brd array maybe 100 ints = 400 bytes. Hmm maybe brd_w2 is 100? Let's examine names: brd_w, brd_w2 maybe "board width in tiles" and "board width squared" not necessarily. If board is 4x4, brd_w2=16. But `GME_BUF_SIZE=400` could be bytes for 100 ints. Why 100? Maybe brd buffer used by shader to store "board" as 10x10 grid? Let's see original `brd_init(4)` sets board width 4? Then board has 4x4 cells. But maybe `brd_w2` is a row stride of 10 because board is 10x10 max? Actually if `brd_w=4` then `brd_w2` might be `brd_w * brd_w`? Yes.
+
+  Let's inspect the push constant struct: sel_id and brd_w. In shader, to compute tile UV maybe `brd_w` in pixels? Not relevant.
+
+  Maybe black screen because of descriptor set layout? Push constant size now `sizeof(gme_upc_t)` but old `vlk_upc_t` was maybe 32 bytes? Let's calculate old: float aspect_x, aspect_y, time, won = 16, unsigned sel_id, brd_w = 8, total 24. Same. Unless due to C padding? struct of 4 floats then 2 unsigned = 24, alignment 4. Same.
+
+  Potential issue: The gme_upc_t declared in gme.h is visible to shader? No, only size.
+
+  Potential issue: The original `vlk_mouse` had __APPLE__ p *= 2. It remains in gme. Not black screen.
+
+  Potential issue: `gme_reset` checks `if (!gme_upc.won) return;`. In `gme_init`, `gme_upc.won = 1;` then `gme_reset()`. But `gme_upc.won` is float; setting to 1. In `gme_reset`, after reset `gme_upc.won = 0`. OK. When player wins, `gme_upc.won = won ? tim_now() : 0;` If won is nonzero time, float. In `gme_mouse_down`, `if (gme_upc.won)` true if timestamp >0. In `gme_reset`, if (!won) return, so during win state won true. OK.
+
+  But after `gme_init`, `gme_upc.won=1`; `gme_reset` loads an atlas. Does `gme_load_atlas` use `gme_upc`? no.
+
+  Potential issue: `gme_load_atlas` was previously `static void vlk_load_atlas`, but definition moved to non-static. However, in vlk.h diff, they removed `#include "brd.h"` etc from VLK_IMPL and included "gme.h". But gme.h includes brd.h only if GME_IMPL. When compiling vlk.h with VLK_IMPL, it includes gme.h. Since `GME_IMPL` is not defined, gme.h only declares functions and type. Good. Then `gme_load_atlas` definition appears after includes. But `vlk.h` no longer includes `brd.h`, `sfx.h`, `snd.h`, `tim.h`; it includes `gme.h` and stb_image. It also still uses `vlk_open`. OK. But in `vlk_deinit`, calls `gme_deinit()`; in original called `snd_deinit()`. gme_deinit defined in gme.h implementation. Fine.
+
+  But wait: `gme.h` contains implementation directly in header. If `GME_IMPL` is defined in the same translation unit as `VLK_IMPL`, then include order matters. Suppose a source file defines `GME_IMPL` and `VLK_IMPL` and includes gme.h then vlk.h. gme.h implementation calls `gme_load_atlas` but its definition is not yet available because vlk.h not included. Since declaration exists, OK. Then vlk.h included with VLK_IMPL includes gme.h (already included, no effect because include guard). Then gme_load_atlas definition after. Link OK. But if source includes vlk.h before gme.h? The diff in puzzle-osx.m:
+  ```
+  #include "gme.h"
+  #include "vlk.h"
+  ```
+  So OK. But what about original source? Unknown.
+
+  Potential black screen due to `gme_load_atlas` definition in vlk.h and `gme_reset` calls `gme_load_atlas`. Since `gme_load_atlas` is an extern function defined in same header only when VLK_IMPL. If VLK_IMPL not defined in the same translation unit that defines GME_IMPL, the call in gme_reset unresolved? It would link if another TU compiles VLK_IMPL. Maybe. If no TU defines VLK_IMPL? It existed before.
+
+  Potential issue in `gme_reset`: it calls `gme_load_atlas(name)` before `brd_init(4)`, but `gme_data` not involved. Original did same.
+
+  Potential issue: In `gme_init`, gme_upc.won=1; then `gme_reset`; But `gme_reset` calls `gme_load_atlas`, which perhaps calls `vlk_open` from Core Foundation on mac. `vlk_open` might require `vlk_hwnd` or asset path? It worked before.
+
+  Let's focus on black screen with code diff. "only renders a black screen" means app starts, likely no crash, clear color black? Wait in `vlk_record_cmdbuf`, clear color is (0.1,0.2,0.3) blue-ish, not black. Black screen could be no atlas rendered. Pipeline draws fullscreen triangle with fragment shader sampling atlas? If descriptor set has no atlas/invalid, could black. Or if push constants wrong, fragment shader outputs black maybe.
+
+  Let's inspect shader behavior? Not provided. But likely fullscreen triangle shaded with board and atlas texture. Black screen might be due to push constants containing wrong values. `gme_frame` sets `time = tim_now()`, aspect. But does not set `brd_w` each frame; `gme_reset` sets. Initial reset sets brd_w. If `gme_frame` is called before `gme_init`? Maybe no. But in `vlk_record` before swapchain? `vlk_frame` calls create_swc then records; before that, `vlk_init` called gme_init. OK.
+
+  Maybe issue `gme_upc.brd_w` type unsigned but in `gme_mouse`:
+  ```
+  float px = gme_mouse(..., gme_upc.aspect_x);
+  ...
+  gme_upc.sel_id = (int)px + (int)py * brd_w;
+  ```
+  But `gme_upc.brd_w` is unsigned, `brd_w` global int. fine.
+
+  Potential issue in `gme_mouse` uses `brd_w` (global) not `gme_upc.brd_w`. In gme.h implementation, after `#include "brd.h"`, brd_w available. OK.
+
+  Let's examine `GME_BUF_SIZE 400`: Why 400? Could be not bytes but count? In `vlk_create_board`:
+  ```
+  const VkDeviceSize sz = GME_BUF_SIZE;
+  ```
+  In Vulkan, size bytes. If emulating "400" as 400 bytes. In `vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data());`
+  This updates 400 bytes. If `brd` array is only 64 bytes, reading 400 bytes is UB; possible black screen because Vulkan may read garbage. But original used `brd_w2 * sizeof(int)` = 64. Why diff changed? Maybe because gme_data should return pointer to a struct containing board plus some metadata? Wait gme_data returns `const void * brd`; brd global maybe not the same as original? Let's infer from original in vlk.h: They had `#include "brd.h"` and used `brd`, `brd_w`, `brd_w2`. Original `vlk_create_board` used `sizeof(brd)`. Thus `brd` is an array, not pointer, and `sizeof(brd)` is total bytes. Original `vkCmdUpdateBuffer` copied `brd_w2 * sizeof(int)` bytes. Why use `brd_w2 * sizeof(int)` not `sizeof(brd)`? Maybe because `brd` is a 2D array with fixed max size, e.g., `int brd[10*10]`, and only first `brd_w2` ints are active. In that case `sizeof(brd)` = 400 if `int brd[100]`. Original `vlk_create_board` allocated `sizeof(brd)` = 400 bytes. Original update copied `brd_w2 * sizeof(int)` (active). Wait if `brd` is `int brd[100]`, `sizeof(brd)` = 400. Original allocated 400. Diff uses GME_BUF_SIZE=400 instead of sizeof(brd), because they moved board data behind gme and don't want expose size? Then update uses GME_BUF_SIZE=400. If brd is int[100], 400 bytes fine. But if board is 4x4, why array 100? It could be because `brd_w2` is not `brd_w*brd_w` but a constant `100`? Let's revisit: `brd_w` may be a pixel coordinate width (e.g., 4) and `brd_w2` might be 100? No, they check `if (b >= brd_w2) return 0;` If board is 4x4, index max 15, so brd_w2 = 16. But update original `brd_w2 * sizeof(int)` = 64. Yet buffer allocated `sizeof(brd)` if brd int[100] = 400. So original allocation was larger than update. That is plausible: brd is fixed max 100 entries, active 16. GME_BUF_SIZE=400 is max bytes. So update of 400 copies whole brd array (100 ints) including uninitialized data beyond active. But `brd` array size is 100, so no out-of-bounds. That is fine. Board buffer larger than active. Shader may only read brd_w2 entries. gme_data returns brd array pointer. So not black screen.
+
+  Wait if GME_BUF_SIZE=400 is bytes equal to sizeof(brd). Good. Then no problem.
+
+  Need find actual black screen. Let's inspect shader and uniforms.
+
+  Diff changes `gme_upc_t` with same fields as old `vlk_upc_t`. But note in old code, `vlk_pc.won` initialized to 1 and `vlk_reset` sets `vlk_pc.won = 0;`. In gme, same. But in old `vlk_init`, `vlk_reset` called before `sfx_init`, and `vlk_reset` calls `brd_init`, `sfx_shuffle`. `sfx_shuffle` probably uses `snd`? Maybe not. In diff `gme_init` calls `sfx_init()` and `snd_init()` before `gme_reset()`. Could `snd_init(sfx_filler)` require whatever? Not black screen.
+
+  Potential issue: `gme_upc.time = tim_now();` But `tim_now()` returns time in seconds. Original `vlk_pc.time = tim_now()` also. OK.
+
+  Potential issue: The `gme_upc.won` field is now used both as boolean and timestamp. In `gme_reset`, `if (!gme_upc.won) return;` But `gme_upc.won` is float. In `gme_mouse_down`, if won true, then if click outside board reset. But after winning, `gme_upc.won` = tim_now() (e.g., 123.45). In `gme_upc` push constant shader uses won as float. OK.
+
+  Potential issue: When game starts, `gme_upc.won=1`, then reset sets to 0. But the push constants for first frame are updated in gme_frame (called after gme_init? yes). It doesn't set `won` in gme_frame, but reset set to 0. OK.
+
+  Maybe black screen due to `gme_load_atlas` symbol. In `gme.h`, `extern void gme_load_atlas(const char * file);` Inside `gme_reset`, call `gme_load_atlas(name);`. But the definition in `vlk.h` is after `vlk_create_pipeline_layout` etc. However, `gme_reset` is called from `gme_init` which is called from `vlk_init`. At that point `gme_load_atlas` is linked. Fine.
+
+  But wait, in `vlk.h` after diff, `gme_load_atlas` is defined in the VLK_IMPL section after `static void vlk_record_buf2img` and before `vlk_update_descriptor_sets`. It uses `vlk_atlas`, `vlk_alloc`, `vlk_begin_single_time`, etc. Good.
+
+  Potential issue with `vlk_create_board`:
+  ```
+  const VkDeviceSize sz = GME_BUF_SIZE;
+  vlk_board_buf = vlk_create_buffer(sz, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+  vlk_board_mem = vlk_allocate_memory(sz, vlk_find_local_memory());
+  ```
+  But originally `sz = sizeof(brd)`; now GME_BUF_SIZE 400. If sizeof(brd) >400? Original before diff `gme.h` didn't have GME_BUF_SIZE; but in brd.h maybe brd array size is 400? Wait if `sizeof(brd)` is 400. If board is 10x10 max = 100 ints = 400 bytes. Good. If brd array is larger, update 400 not enough. Unlikely.
+
+  Potential issue: `gme_data` returns `brd` but if `brd` is not defined in the translation unit with `GME_IMPL`, compile error. It compiles.
+
+  Potential issue: The diff didn't include `#include <stdlib.h>` or `<stdio.h>` in gme.h implementation for rand/snprintf. Original vlk.h implementation probably already included? Let's inspect top of vlk.h diff: only includes gme.h and stb_image. Did they remove includes? Original vlk.h before diff likely had includes at top? We see in diff:
+  ```
+  #ifdef VLK_IMPL
+  -#include "Vulkan-Headers/include/vulkan/vulkan_core.h"
+  -
+  -#include "brd.h"
+  +#include "gme.h"
+   #include "stb_image.h"
+  -#include "sfx.h"
+  -#include "snd.h"
+  -#include "tim.h"
+  ```
+  It removed `vulkan_core.h`? Wait original vlk.h had `#include "Vulkan-Headers/include/vulkan/vulkan_core.h"` in VLK_IMPL? The diff shows minus that line. It removed it! But the rest of vlk.h uses Vk types. If `vulkan_core.h` is not included, compile errors. But maybe vulkan_core.h is included elsewhere in vlk.h before VLK_IMPL? Need inspect vlk.h full. Top of vlk.h before diff:
+  ```
+  void vlk_init(int surf);
+  ...
+  #ifdef __APPLE__
+  ...
+  #endif
+  #ifdef VLK_IMPL
+  #include "Vulkan-Headers/include/vulkan/vulkan_core.h"
+  ...
+  ```
+  The minus means they removed `vulkan_core.h`. But perhaps gme.h includes brd.h which includes? No. `vlk.h` may include vulkan.h? It needs Vk types. If removed, compilation fails, not black screen. But the diff as applied compiles? User says renders black screen, so maybe vulkan_core.h included by build include chain or Metal? Hmm diff removed but maybe `vlk.h` top has `#include <vulkan/vulkan.h>`? Not shown. Let's consider.
+
+  Actually in diff, line:
+  ```
+  -#include "Vulkan-Headers/include/vulkan/vulkan_core.h"
+  -
+  -#include "brd.h"
+  +#include "gme.h"
+   #include "stb_image.h"
+  -#include "sfx.h"
+  -#include "snd.h"
+  -#include "tim.h"
+  ```
+  They removed `vulkan_core.h` from VLK_IMPL. But if `vlk.h` is included by puzzle-osx.m after `#import <MetalKit/MetalKit.h>`, no Vulkan headers. However, maybe `vlk.h` before `#ifdef VLK_IMPL` includes `<vulkan/vulkan.h>`? We only see top:
+  ```
+  #ifndef VLK_H
+  #define VLK_H
+
+  void vlk_init...
+  ...
+  #ifdef __APPLE__
+  ...
+  #endif
+  #ifdef VLK_IMPL
+  #include "Vulkan-Headers/include/vulkan/vulkan_core.h"
+  ...
+  ```
+  If no VLK_IMPL in puzzle-osx.m, no need. But when VLK_IMPL defined, vulkan_core.h might be included via `gme.h`? The gme.h implementation includes brd/sfx/snd/tim, not Vulkan. Then code below uses Vk types; compile error. But perhaps user says black screen, not compile error; maybe there is a different translation unit that includes vulkan before vlk.h.
+
+  Wait user asks "I applied the following diff to my game and now it only renders a black screen." They likely have it compiling and running. So include issue not relevant.
+
+  Let's inspect all diff changes for black screen.
+
+  Diff in puzzle-osx.m:
+  - `#include "gme.h"` before `#include "vlk.h"`
+  - keyDown calls gme_reset instead of vlk_reset.
+  - mouseDown calls gme_mouse_down.
+  - mouseMoved calls gme_mouse_move.
+  Coordinates remain same.
+
+  If `gme_mouse_down` has `if (gme_upc.won)` and gme_upc.won is timestamp. When won, click outside board (px > brd_w || py > brd_w) resets. If click inside board after win, nothing. OK.
+
+  Potential issue: In `gme_mouse_move`, if `gme_upc.won` return; if not, compute. But if `gme_upc.won` is a timestamp (after win, nonzero), returns. During game won=0. Good.
+
+  Potential issue: `gme_upc.won` is set in `gme_init` to 1. But before `gme_init`, `gme_upc` static zero. `gme_frame` may be called before `gme_init`? In `vlk_init`, gme_init called at end. `vlk_frame` after. Fine.
+
+  Maybe black screen due to `gme_init` calling `snd_init(sfx_filler)` before `gme_reset`, but original `vlk_reset` loaded atlas and initialized board before `sfx_init` and `snd_init`. `snd_init` maybe uses `sfx_filler` and needs Vulkan? no.
+
+  Let's see if `gme_load_atlas` is defined in `vlk.h` but not declared in `gme.h` before use in `gme.h` implementation. In gme.h:
+  ```
+  extern void gme_load_atlas(const char * file);
+  ...
+  #ifdef GME_IMPL
+  #include...
+  static ... gme_reset...
+    gme_load_atlas(name);
+  ```
+  The declaration appears before implementation, so OK.
+
+  Potential black screen due to `vlk_record_cmdbuf` now does `vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data());` every frame. In Vulkan, `vkCmdUpdateBuffer` can only be used outside a render pass instance. It is before begin render pass, yes. But if called every frame, it requires buffer memory to be host-visible? `vkCmdUpdateBuffer` copies from host memory to buffer on GPU timeline, no host pointer after call? Actually vkCmdUpdateBuffer uses bytes from host pointer immediately? In Vulkan, vkCmdUpdateBuffer parameters include `const void* pData`; the data is copied to the command buffer when the command is recorded, not at execution. So reading from `brd` during command buffer recording is safe. It will update buffer every frame. Original did only when board load flag. This should still render. But there is a subtle synchronization issue: `vkCmdUpdateBuffer` of 400 bytes before render pass. The fragment shader reads storage buffer. In Vulkan, vkCmdUpdateBuffer performs a transfer write; we need pipeline barrier between transfer and shader read? Original used `vkCmdUpdateBuffer` and presumably no barrier? Wait original in `vlk_record_cmdbuf`:
+  ```
+  if (vlk_board_load) {
+      vkCmdUpdateBuffer(cb, vlk_board_buf, 0, brd_w2*sizeof(int), brd);
+      vlk_board_load=0;
+  }
+  ...
+  VkClearValue clear...
+  vkCmdBeginRenderPass...
+  vkCmdDraw...
+  ```
+  Also no barrier? Actually `vkCmdUpdateBuffer` is a transfer command. Subsequent shader read of storage buffer may need barrier. But original worked because `vkCmdUpdateBuffer` maybe executed before render pass? In a command buffer, commands execute in order, but memory dependencies need barriers. However, vkCmdUpdateBuffer writes to buffer; then render pass uses same buffer. Without barrier, undefined. Yet perhaps the Vulkan spec says vkCmdUpdateBuffer is a transfer command; shader read after it in same queue needs barrier. But maybe no issue due to implicit ordering? Need not. But original did this and worked; now every frame same. OK.
+
+  Actually wait: If `vkCmdUpdateBuffer` is called *every frame* inside `vlk_record_cmdbuf`, and the previous frame's fragment shader may still be reading from `vlk_board_buf` (in flight). Command buffer recording includes update at beginning of next frame while previous command buffer may still be executing? `vlk_frame` waits on fences for current inflight before recording? It waits for fence for `inf`. If using triple buffering, it waits until that command buffer finished. So no race. OK.
+
+  Potential issue: In `vlk_record_cmdbuf`, `vkCmdUpdateBuffer(cb, vlk_board_buf, 0, GME_BUF_SIZE, gme_data());` `GME_BUF_SIZE` is 400. But the descriptor's storage buffer range? In `vlk_update_descriptor_sets` probably set range to `sizeof(brd)`? Let's inspect not shown. If descriptor info was set with size = `sizeof(brd)` and now buffer size GME_BUF_SIZE; probably same.
+
+  Potential issue: `gme_upc` is static inside gme.h when GME_IMPL. If `GME_IMPL` is not defined in the same TU that defines `gme_init`? But gme_init is defined under `#ifdef GME_IMPL` in gme.h. If no GME_IMPL, no gme_init, link error. It must be defined somewhere.
+
+  Let's consider if there are two copies of gme_upc: one in gme.h implementation and one? In gme.h, `static gme_upc_t gme_upc;` is defined when GME_IMPL. `gme_pc` returns pointer to that static. `gme_frame` modifies that. Good.
+
+  But `gme_mouse_down` and `gme_mouse_move` also use `gme_upc`. They are in same implementation. Good.
+
+  Potential issue: `gme_data` returns `brd`, but `brd` may be a macro or function? No.
+
+  Potential issue: In `vlk_record`, they call `gme_frame()` every command buffer record. But `gme_frame` only updates `gme_upc.time` and aspects. It doesn't update `gme_upc.brd_w`; shader's push constants brd_w may be uninitialized for very first frame? `gme_init` calls gme_reset, sets brd_w. yes.
+
+  Potential issue: `gme_resize` is declared but never called. Original `vlk_ext` was set by swapchain? Wait `vlk_resize(int w,h)`? In original, `vlk_pc.aspect_x` calculated from `vlk_ext.width / vlk_ext.height` in `vlk_record`. No need `gme_resize`. But gme_frame calculates from gme_width/gme_height. Where are gme_width/gme_height set? `gme_resize` is called from where? The diff doesn't modify any resize callback to call `gme_resize`. In original, `vlk_ext.width/height` was a global updated in `vlk_create_swc`? Let's inspect: `vlk_ext` is a struct with width/height maybe from swapchain. In `gme_frame`, it uses `gme_width` and `gme_height`, which are static zero unless `gme_resize` is called. There is no call to `gme_resize` added in puzzle-osx.m or vlk. Aha! This is likely the black screen cause? Let's examine.
+
+  In original `vlk_record`:
+  ```
+  float a = (float)vlk_ext.width / (float)vlk_ext.height;
+  vlk_pc.aspect_x = a > 1 ? a : 1;
+  vlk_pc.aspect_y = a > 1 ? 1 : (1.0 / a);
+  ```
+  `vlk_ext` is likely a struct with actual surface size, set by `vlk_create_swc` or `vlk_resize`? In diff, `gme_frame` uses `gme_width/gme_height`, but `gme_resize` is defined and declared but never called. Unless `gme_resize` is called from `vlk_resize`? There is `vlk_resize(int w,h)` in vlk.h? Diff didn't show. Original vlk.h likely has `void vlk_resize(int w, int h);`? Let's inspect top of vlk.h original in diff: It removed `void vlk_reset(); void vlk_mouse_down...` but didn't mention `vlk_resize`. Wait show first hunk:
+  ```
+   void vlk_deinit();
+   
+   void * vlk_headless(int w, int h);
+   
+  -void vlk_reset();
+  -void vlk_mouse_down(int x, int y);
+  -void vlk_mouse_move(int x, int y);
+  -
+   extern unsigned vlk_open...
+  ```
+  No `vlk_resize` listed. There may be a `vlk_resize`? Not. `vlk_ext` likely set by `vlk_create_swc()` internally based on surface capabilities? Let's reason.
+
+  Metal view calls `mtkView:drawableSizeWillChange:` perhaps calls `vlk_resize`? The diff didn't change. In gme.h, `gme_resize(int w, int h)` is new. If nothing calls it, gme_width and gme_height remain 0. Then `gme_frame`: `float a = (float)0 / (float)0;` = NaN. `a > 1 ? a : 1` false, aspect_x =1; aspect_y = 1/NaN? For a NaN, a>1 false, aspect_y = 1.0 / a = NaN. Push constants NaN; shader may output black? It could. In original, `vlk_ext.width` and height were actual swapchain extents, set during initialization. So this is a strong candidate.
+
+  Let's verify: In gme_frame:
+  ```
+  float a = (float)gme_width / (float)gme_height;
+  gme_upc.aspect_x = a > 1 ? a : 1;
+  gme_upc.aspect_y = a > 1 ? 1 : (1.0 / a);
+  ```
+  If gme_width/gme_height zero, 0/0 = NaN. Set aspect_x=1, aspect_y=NaN. In shader, aspect_y NaN could cause vertex/fragment positions NaN, maybe no triangles? But vertices in vertex shader likely use push constants aspect to correct positions; NaN yields undefined, possibly black. Even if not, the board mapping is wrong. Need call `gme_resize` somewhere. But maybe `gme_resize` called from `vlk_resize`? Search diff didn't show. There is no call. The original `gme.h` implementation defines `gme_resize` but not integrated. User only diff did not add calls to `gme_resize` in puzzle-osx.m or vlk. This seems likely.
+
+  But wait, if gme_width/gme_height are 0, then `gme_frame` divides by zero. However, `vlk_frame` before record may have `vlk_ext` set by swapchain. But gme doesn't use `vlk_ext`. A black screen indeed. But could there be a call in `vlk_init` to `gme_resize`? The diff didn't show. In original `vlk_init` maybe had `vlk_ext` set? Let's inspect diff snippet around `vlk_init`:
+  ```
+  void vlk_init(int surf) {
+    ...
+    vlk_create_img(&vlk_atlas, 1024, 1024,...);
+    vlk_update_descriptor_sets();
+
+  -  vlk_pc.won = 1;
+  -  vlk_reset();
+  -
+  -  sfx_init();
+  -  snd_init(sfx_filler);
+  +  gme_init();
+  }
+  ```
+  No gme_resize. So yes.
+
+  But maybe `gme_resize` is called by the OS window delegate? The diff in puzzle-osx.m doesn't show. But maybe there was an existing `- (void)mtkView:drawableSizeWillChange:` that calls `vlk_resize`? In original code, there might be `vlk_resize` not in diff? The diff from original to new doesn't show `vlk_resize` function or call. The original `vlk.h` likely had `void vlk_resize(int w, int h);`? Wait if there is `vlk_resize` function in vlk.h, diff would show? The first hunk of vlk.h:
+  ```
+   void vlk_deinit();
+
+   void * vlk_headless(int w, int h);
+
+  -void vlk_reset();
+  -void vlk_mouse_down(int x, int y);
+  -void vlk_mouse_move(int x, int y);
+  -
+   extern unsigned vlk_open...
+  ```
+  If `vlk_resize` existed, it would be in context above/below? Not shown. Let's see hunk line counts: It starts at line 7, context lines `void vlk_deinit();`, `void * vlk_headless(int w, int h);`, then removed `vlk_reset`, `vlk_mouse_down`, `vlk_mouse_move`. If `vlk_resize` existed, maybe it was before `vlk_deinit` and not in hunk? No, because hunk context includes vlk_deinit. So no vlk_resize. Thus `vlk_ext` was set by internal swapchain.
+
+  Let's examine `vlk_create_swc` likely sets `vlk_ext` to `swapchain extent`. In `vlk_record`, original used `vlk_ext` directly. After diff, `gme_frame` uses `gme_width/gme_height` but no one sets. This is a definite bug.
+
+  What should we tell user? Need answer likely "You never call gme_resize, so gme_width/gme_height remain 0, aspect_y NaN". Need propose fix: call gme_resize from wherever the drawable size changes / after swapchain creation, e.g., in `vlk_resize` or view controller `mtkView:drawableSizeWillChange`, and/or initialize gme_width/height from vlk_ext. Since `gme_resize` exists but is not called. We need maybe provide patch.
+
+  Let's be thorough. Need include exact explanation and fix. Also mention black screen from NaN push constants. Also maybe mention if no existing resize path, use `gme_resize(vlk_ext.width, vlk_ext.height)` after `vlk_create_swc`/in `vlk_init` and on resize. Need inspect `vlk_ext` accessible? It's static in vlk.h? In `vlk_record`, `vlk_ext` is static? We need know from diff: `vlk_ext` appears in removed code `vlk_pc.aspect_x = ... vlk_ext.width`. It is likely static global in vlk.h implementation. `vlk_init` can set `gme_resize(vlk_ext.width, vlk_ext.height)` after swapchain created. But `vlk_create_swc` may be called later lazily? In `vlk_init`, does it create swapchain? Likely if surf, `vlk_create_swc()`? The diff of `vlk_init` (not fully shown) maybe:
+  ```
+  void vlk_init(int surf) {
+    ...
+    if (surf) vlk_create_swc();
+    vlk_create_img...
+  ```
+  Need know. But `vlk_ext` maybe set by `vlk_create_swc`; called before gme_init. We can add `gme_resize(vlk_ext.width, vlk_ext.height);` inside `vlk_init` after swapchain/layout, before gme_init or after? But if swapchain changes on resize, need update. In original, `vlk_record` used `vl
+.
+

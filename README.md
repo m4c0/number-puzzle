@@ -12,6 +12,12 @@ Currently available on:
 [app-store]: https://apps.apple.com/pk/app/casually-casual-sliding-puzzle/id6781833428
 [itch]: https://m4c0.itch.io/number-puzzle
 
+## Features
+
+* Free to play (without any ads)
+* Game starts really fast
+* Very small system requirements
+
 ## Changelog
 
 ### Version 1.0.0
